@@ -1,6 +1,7 @@
 package CPU.Componts
 
 import chisel3._
+import chisel3.util._
 import CPU.CPUConfig._
 
 /**
@@ -35,5 +36,7 @@ class ALUControlUnit extends Module {
     /* output */
     val aluOperation = Output(UInt(ALU_OPERATION_W.W))
   })
-  io.aluOperation := 0.U
+  when(io.isBType === true.B || io.isRType === true.B) {
+    io.aluOperation := Cat(io.funct3, io.funct7(5), io.isWord, io.isBType)
+  }.elsewhen(io.isIType === true.B) {}.otherwise {}
 }
