@@ -6,8 +6,6 @@ import chisel3.util.BitPat
 
 import CPU._
 
-import CPU.{InstKind, InstKind2Opcode}
-
 /**
  * <b>[[控制单元]]</b>
  * <p>

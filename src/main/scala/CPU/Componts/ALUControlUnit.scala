@@ -2,7 +2,9 @@ package CPU.Componts
 
 import chisel3._
 import chisel3.util._
+
 import CPU.CPUConfig._
+import CPU._
 
 /**
  * <b>[[ALU 控制单元]]</b>
@@ -20,8 +22,11 @@ import CPU.CPUConfig._
  * <p>
  * [[output]]
  *   - aluOperation : 根据输入生成的 6 位控制码
- *                    若为 R-type/B-type, 组成为 funct3|inst[30]|isWord|isBType
+ *                    若为 R-type, 组成为 funct3|inst[30]|isWord|isBType
+ *                    若为 B-type, 组成为 funct3|0|isWord|isBType
  *                    若为 I-type, 则为对应的 R-type 的控制码
+ *                        对于 SRLI / SRAI / SRLIW / SRAIW, 为 funct3|inst[30]|isWord|isBType
+ *                        对于其他的, 为 funct3|0|isWord|isBType
  *                    若均不是, 则生成默认控制码(将执行 ADD 操作)
  */
 class ALUControlUnit extends Module {
@@ -36,7 +41,28 @@ class ALUControlUnit extends Module {
     /* output */
     val aluOperation = Output(UInt(ALU_OPERATION_W.W))
   })
-  when(io.isBType === true.B || io.isRType === true.B) {
-    io.aluOperation := Cat(io.funct3, io.funct7(5), io.isWord, io.isBType)
-  }.elsewhen(io.isIType === true.B) {}.otherwise {}
+
+  // funct3 | inst[30]
+  val combine = WireDefault(ALUOperation2Opcode.getBOpcodeDefault().U(4.W))
+
+  when(io.isRType === true.B) {
+    combine := Cat(io.funct3, io.funct7(5))
+  }.elsewhen(io.isBType === true.B) {
+    combine := Cat(io.funct3, 0.U)
+  }.elsewhen(io.isIType === true.B) {
+    when(io.funct3 === "b101".U) { // SRLI / SRAI / SRLIW / SRAIW
+      combine := Cat(io.funct3, io.funct7(5))
+    }.otherwise(
+      combine := Cat(io.funct3, 0.U)
+    )
+  }
+
+  io.aluOperation := Cat(combine, io.isWord, io.isBType)
+
+  // **************** print **************** //
+  if (DebugConfig.ALUControlUnitIOPrint) {
+    CPUPrintf.printfForIO(io, "")
+    // CPUPrintf.printfForIOArg(combine, "")
+  }
+
 }
