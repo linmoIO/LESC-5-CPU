@@ -52,9 +52,9 @@ class ALUControlUnit extends Module {
   }.elsewhen(io.isIType === true.B) {
     when(io.funct3 === "b101".U) { // SRLI / SRAI / SRLIW / SRAIW
       combine := Cat(io.funct3, io.funct7(5))
-    }.otherwise(
+    }.otherwise {
       combine := Cat(io.funct3, 0.U)
-    )
+    }
   }
 
   io.aluOperation := Cat(combine, io.isWord, io.isBType)

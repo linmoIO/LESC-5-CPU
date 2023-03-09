@@ -2,6 +2,7 @@ package CPU.Componts
 
 import chisel3._
 import CPU.CPUConfig._
+import CPU._
 
 /**
  * <b>[[寄存器单元]]</b>
@@ -31,6 +32,28 @@ class RegUnit extends Module {
     val readDataRs1 = Output(UInt(XLEN.W))
     val readDataRs2 = Output(UInt(XLEN.W))
   })
-  io.readDataRs1 := 0.U
-  io.readDataRs2 := 0.U
+
+  // 32 个寄存器, 64 位
+  val regGroup = Reg(Vec(REGISTE_NUM, UInt(XLEN.W)))
+
+  // 考虑写时读的问题, 读写转发
+  io.readDataRs1 := Mux(
+    (io.writeEnable && (io.rs1 === io.rd)),
+    io.writeData,
+    regGroup(io.rs1)
+  )
+  io.readDataRs2 := Mux(
+    (io.writeEnable && (io.rs2 === io.rd)),
+    io.writeData,
+    regGroup(io.rs2)
+  )
+
+  when(io.writeEnable === true.B) {
+    regGroup(io.rd) := io.writeData
+  }
+
+  // **************** print **************** //
+  if (DebugConfig.RegUnitIOPrint) {
+    CPUPrintf.printfForIO(io, "")
+  }
 }

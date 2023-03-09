@@ -78,7 +78,7 @@ class SingleCycleCPU extends Module {
     regUnit.io.readDataRs2
   )
 
-  dataMemory.io.valid := controlUnit.io.memRead & controlUnit.io.memWrite
+  // dataMemory.io.valid := controlUnit.io.memRead & controlUnit.io.memWrite
   dataMemory.io.memRead := controlUnit.io.memRead
   dataMemory.io.memWrite := controlUnit.io.memWrite
   dataMemory.io.address := alu.io.result

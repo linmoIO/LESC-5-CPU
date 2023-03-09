@@ -27,6 +27,7 @@ class ResSelectUnit extends Module {
     val isJump = Input(Bool())
     val immALUToReg = Input(Bool())
     val memRead = Input(Bool())
+
     val readData = Input(UInt(XLEN.W))
     val aluResult = Input(UInt(XLEN.W))
     val imm = Input(UInt(XLEN.W))
@@ -34,5 +35,16 @@ class ResSelectUnit extends Module {
     /* output */
     val out = Output(UInt(XLEN.W))
   })
-  io.out := 0.U
+
+  val resWire = WireDefault(io.aluResult)
+
+  when(io.memRead === true.B) {
+    resWire := io.readData
+  }.elsewhen(io.isJump === true.B) {
+    resWire := io.pcPlus4
+  }.elsewhen(io.immALUToReg === true.B) {
+    resWire := io.imm
+  }
+
+  io.out := resWire
 }

@@ -28,13 +28,24 @@ class PCSelectUnit extends Module {
     /* input */
     val pcPlus4 = Input(UInt(XLEN.W))
     val pcPlusImm = Input(UInt(XLEN.W))
+
     val isJALR = Input(Bool())
     val isBType = Input(Bool())
     val isJump = Input(Bool())
     val isTrue = Input(Bool())
+
     val aluResult = Input(UInt(XLEN.W))
     /* output */
     val nextPC = Output(UInt(XLEN.W))
   })
-  io.nextPC := 0.U
+
+  val nextPC = WireDefault(io.pcPlus4)
+
+  when(io.isJALR === true.B) {
+    nextPC := io.aluResult
+  }.elsewhen(io.isJump || (io.isBType && io.isTrue)) {
+    nextPC := io.pcPlusImm
+  }
+
+  io.nextPC := nextPC
 }
