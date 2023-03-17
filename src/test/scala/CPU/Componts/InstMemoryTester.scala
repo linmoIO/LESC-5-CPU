@@ -32,19 +32,13 @@ trait TestFunctionInstMemoryRandom {
   }
 
   // 为随机指令生成hex文本文件
-  def genMemInstHex(randomInstHexFile: String): Unit = {
-    val dir = System
-      .getProperty("user.dir")
-      .appendedAll(s"/${HEX_INST_DIR}/${randomInstHexFile}")
-
-    // 创建对应文件夹
-    val dirFile = new File(dir)
-    if (!dirFile.exists()) {
-      dirFile.mkdirs();
-    }
+  def genMemInstHex(hexPath: String): Unit = {
+    val pairDirName = CPUUtils.getDirName(hexPath)
+    val dir = pairDirName._1
+    val hexName = pairDirName._2
 
     // 生成源hex
-    val filePath = s"${dir}/${randomInstHexFile}.hex"
+    val filePath = s"${dir}/${hexName}.hex"
     val memFile = new File(filePath)
     memFile.createNewFile()
     val memPrintWriter = new PrintWriter(memFile)
@@ -54,7 +48,7 @@ trait TestFunctionInstMemoryRandom {
     memPrintWriter.close()
 
     // 生成 split hex
-    CPUUtils.splitHexFile(dir, randomInstHexFile, INST_BYTE)
+    CPUUtils.splitHexFile(dir, hexName, INST_BYTE)
   }
 
   def testFn(dut: InstMemory): Unit = {
@@ -68,22 +62,23 @@ trait TestFunctionInstMemoryRandom {
       )
     }
   }
+
 }
 
 trait TestFunctionInstMemoryInst {
   private var inst_list = ArrayBuffer[String]()
 
-  def loadHexFile(filename: String) = {
-    val dir = System
-      .getProperty("user.dir")
-      .appendedAll(s"/${HEX_INST_DIR}/${filename}")
-    val filePath = s"${dir}/${filename}.hex"
+  def loadHexFile(filePath: String) = {
+    val pairDirName = CPUUtils.getDirName(filePath)
+    val dir = pairDirName._1
+    val hexName = pairDirName._2
+
     val sourceFile = Source.fromFile(filePath)
     inst_list.appendAll(sourceFile.getLines())
     sourceFile.close()
 
     // 生成分离的 Hex
-    CPUUtils.splitHexFile(dir, filename, INST_BYTE)
+    CPUUtils.splitHexFile(dir, hexName, INST_BYTE)
   }
   def testInst(dut: InstMemory) = {
     // 依次读取所有的指令，与inst_list进行匹配
@@ -106,7 +101,9 @@ class InstMemoryTester
   "InstMemory Random Test" should "pass" in {
     // 随机生成测试
     // 先生成随机hex文件，再进行测试
-    val randomHexFile = "random_inst"
+    val randomHexFile = System
+      .getProperty("user.dir")
+      .appendedAll("/src/test/hex/random/inst/random.hex")
     genMemInstHex(randomHexFile)
     test(new InstMemory(randomHexFile)) { dut =>
       testFn(dut)
@@ -115,9 +112,11 @@ class InstMemoryTester
   "InstMemory Inst Test" should "pass" in {
     // 已有文件测试
     // 先读取文件, 再测试
-    val inst3rr0rHexFile = "inst_3rr0r"
-    loadHexFile(inst3rr0rHexFile)
-    test(new InstMemory(inst3rr0rHexFile)) { dut =>
+    val fibonacciHexFile = System
+      .getProperty("user.dir")
+      .appendedAll("/src/test/hex/fibonacci/inst/fibonacci.hex")
+    loadHexFile(fibonacciHexFile)
+    test(new InstMemory(fibonacciHexFile)) { dut =>
       testInst(dut)
     }
   }

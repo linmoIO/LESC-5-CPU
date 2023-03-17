@@ -4,11 +4,11 @@ import chisel3._
 import chisel3.util.switch
 import chisel3.util._
 
-import CPU.ALUOperation2Opcode._
-import CPU.ALUOperation._
+import CPU._
+import CPU.ALUOpWithCode._
+import CPU.ALUOp._
 import CPU.CPUConfig._
 import CPU.CPUUtils._
-import CPU._
 
 /**
  * <b>[[ALU 运算单元]]</b>
@@ -33,51 +33,51 @@ class ALU extends Module {
     /* output */
     val result = Output(UInt(XLEN.W))
   })
-  val combine = io.aluOperation(5, 2)
-  val isWord = io.aluOperation(1).asBool
-  val isBType = io.aluOperation(0).asBool
+  val combine = io.aluOperation(5, 2) // 4 位操作码
+  val isWord = io.aluOperation(1).asBool // 是否为 *W 指令
+  val isBType = io.aluOperation(0).asBool // 是否为 Branch 类型
 
   // 针对 Word 指令
   val x32 = io.x(31, 0)
   val y32 = io.y(31, 0)
 
   // 移位量
-  val shamt = io.y(SHAMT_W - 1, 0)
-  val shamtW = io.y(SHAMT_W - 2, 0)
+  val shamt = io.y(SHAMT_W - 1, 0) // 6位
+  val shamtW = io.y(SHAMT_W - 2, 0) // 5位
 
-  val resWire = WireDefault(io.x + io.y)
+  val resWire = WireDefault(io.x +& io.y) // 结果总线
 
   when(isBType === true.B) { // B-Type
     switch(combine) {
       // BEQ
-      is(getBOpcode(BEQ).U) {
+      is(getBCode(BEQ).U) {
         resWire := io.x === io.y
       }
       // BNE
-      is(getBOpcode(BNE).U) {
+      is(getBCode(BNE).U) {
         resWire := io.x =/= io.y
       }
       // BLT
-      is(getBOpcode(BLT).U) {
+      is(getBCode(BLT).U) {
         resWire := (io.x.asSInt < io.y.asSInt).asUInt
       }
       // BGE
-      is(getBOpcode(BGE).U) {
+      is(getBCode(BGE).U) {
         resWire := (io.x.asSInt >= io.y.asSInt).asUInt
       }
       // BLTU
-      is(getBOpcode(BLTU).U) {
+      is(getBCode(BLTU).U) {
         resWire := (io.x < io.y)
       }
       // BGEU
-      is(getBOpcode(BGEU).U) {
+      is(getBCode(BGEU).U) {
         resWire := (io.x >= io.y)
       }
     }
   }.otherwise { // R-Type / I-Type
     switch(combine) {
       // ADD : ADD/ADDI, ADDW/ADDIW
-      is(getBOpcode(ADD).U) {
+      is(getBCode(ADD).U) {
         when(isWord === true.B) {
           resWire := signExtend32To64(x32 + y32)
         }.otherwise {
@@ -85,7 +85,7 @@ class ALU extends Module {
         }
       }
       // SUB : SUB, SUBW
-      is(getBOpcode(SUB).U) {
+      is(getBCode(SUB).U) {
         when(isWord === true.B) {
           resWire := signExtend32To64(x32 - y32)
         }.otherwise {
@@ -93,7 +93,7 @@ class ALU extends Module {
         }
       }
       // SLL : SLL/SLLI, SLLW/SLLIW
-      is(getBOpcode(SLL).U) {
+      is(getBCode(SLL).U) {
         when(isWord === true.B) {
           resWire := signExtend32To64(x32 << shamtW)
         }.otherwise {
@@ -101,19 +101,19 @@ class ALU extends Module {
         }
       }
       // SLT : SLT/SLTI
-      is(getBOpcode(SLT).U) {
+      is(getBCode(SLT).U) {
         resWire := (io.x.asSInt < io.y.asSInt).asUInt
       }
       // SLTU : SLTU/SLTIU
-      is(getBOpcode(SLTU).U) {
+      is(getBCode(SLTU).U) {
         resWire := (io.x < io.y)
       }
       // XOR : XOR/XORI
-      is(getBOpcode(XOR).U) {
+      is(getBCode(XOR).U) {
         resWire := (io.x ^ io.y)
       }
       // SRL : SRL/SRLI, SRLW/SRLIW
-      is(getBOpcode(SRL).U) {
+      is(getBCode(SRL).U) {
         when(isWord === true.B) {
           resWire := signExtend32To64(x32 >> shamtW)
         }.otherwise {
@@ -121,7 +121,7 @@ class ALU extends Module {
         }
       }
       // SRA : SRA/SRAI, SRAW/SRAIW
-      is(getBOpcode(SRA).U) {
+      is(getBCode(SRA).U) {
         when(isWord === true.B) {
           resWire := signExtend32To64(
             (x32.asSInt >> shamtW).asUInt
@@ -131,11 +131,11 @@ class ALU extends Module {
         }
       }
       // OR : OR/ORI
-      is(getBOpcode(OR).U) {
+      is(getBCode(OR).U) {
         resWire := (io.x | io.y)
       }
       // AND : AND/ADNI
-      is(getBOpcode(AND).U) {
+      is(getBCode(AND).U) {
         resWire := (io.x & io.y)
       }
     }
@@ -144,9 +144,20 @@ class ALU extends Module {
   io.result := resWire
 
   // **************** print **************** //
-  if (DebugConfig.ALUIOPrint) {
-    CPUPrintf.printfForIO(io, "")
-    CPUPrintf.printfForIOArg(shamt, "")
-    // CPUPrintf.printfForIOArg(combine, "")
+  val needBinary = List(io.aluOperation)
+  val needDec = List(io.result, io.x, io.y)
+  val needHex = List()
+  val needBool = io.getElements.filter(data => data.isInstanceOf[Bool]).toList
+
+  if (DebugControl.ALUIOPrint) {
+    CPUPrintf.printfIO(
+      "INFO",
+      this,
+      io.getElements.toList,
+      needBinary,
+      needDec,
+      needHex,
+      needBool
+    )
   }
 }

@@ -2,6 +2,7 @@ package CPU.Componts
 
 import chisel3._
 import CPU.CPUConfig._
+import CPU._
 
 /**
  * <b>[[PC地址选择单元]]</b>
@@ -48,4 +49,22 @@ class PCSelectUnit extends Module {
   }
 
   io.nextPC := nextPC
+
+  // **************** print **************** //
+  val needBinary = List()
+  val needDec = List()
+  val needHex = List(io.pcPlus4, io.pcPlusImm, io.aluResult, io.nextPC)
+  val needBool = io.getElements.filter(data => data.isInstanceOf[Bool]).toList
+
+  if (DebugControl.PCSelectUnitIOPrint) {
+    CPUPrintf.printfIO(
+      "INFO",
+      this,
+      io.getElements.toList,
+      needBinary,
+      needDec,
+      needHex,
+      needBool
+    )
+  }
 }

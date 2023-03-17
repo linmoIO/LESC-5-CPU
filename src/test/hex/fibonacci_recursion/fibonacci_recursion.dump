@@ -1,0 +1,64 @@
+
+fibonacci_recursion：     文件格式 elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000000 <fibonacci>:
+   0:	fd010113          	add	sp,sp,-48
+   4:	02113423          	sd	ra,40(sp)
+   8:	02813023          	sd	s0,32(sp)
+   c:	00913c23          	sd	s1,24(sp)
+  10:	03010413          	add	s0,sp,48
+  14:	00050793          	mv	a5,a0
+  18:	fcf42e23          	sw	a5,-36(s0)
+  1c:	fdc42783          	lw	a5,-36(s0)
+  20:	0007871b          	sext.w	a4,a5
+  24:	00100793          	li	a5,1
+  28:	00f70a63          	beq	a4,a5,3c <fibonacci+0x3c>
+  2c:	fdc42783          	lw	a5,-36(s0)
+  30:	0007871b          	sext.w	a4,a5
+  34:	00200793          	li	a5,2
+  38:	00f71663          	bne	a4,a5,44 <fibonacci+0x44>
+  3c:	00100793          	li	a5,1
+  40:	0400006f          	j	80 <fibonacci+0x80>
+  44:	fdc42783          	lw	a5,-36(s0)
+  48:	fff7879b          	addw	a5,a5,-1
+  4c:	0007879b          	sext.w	a5,a5
+  50:	00078513          	mv	a0,a5
+  54:	fadff0ef          	jal	0 <fibonacci>
+  58:	00050793          	mv	a5,a0
+  5c:	00078493          	mv	s1,a5
+  60:	fdc42783          	lw	a5,-36(s0)
+  64:	ffe7879b          	addw	a5,a5,-2
+  68:	0007879b          	sext.w	a5,a5
+  6c:	00078513          	mv	a0,a5
+  70:	f91ff0ef          	jal	0 <fibonacci>
+  74:	00050793          	mv	a5,a0
+  78:	00f487bb          	addw	a5,s1,a5
+  7c:	0007879b          	sext.w	a5,a5
+  80:	00078513          	mv	a0,a5
+  84:	02813083          	ld	ra,40(sp)
+  88:	02013403          	ld	s0,32(sp)
+  8c:	01813483          	ld	s1,24(sp)
+  90:	03010113          	add	sp,sp,48
+  94:	00008067          	ret
+
+0000000000000098 <main>:
+  98:	fe010113          	add	sp,sp,-32
+  9c:	00113c23          	sd	ra,24(sp)
+  a0:	00813823          	sd	s0,16(sp)
+  a4:	02010413          	add	s0,sp,32
+  a8:	00800793          	li	a5,8
+  ac:	fef42623          	sw	a5,-20(s0)
+  b0:	fec42783          	lw	a5,-20(s0)
+  b4:	00078513          	mv	a0,a5
+  b8:	f49ff0ef          	jal	0 <fibonacci>
+  bc:	00050793          	mv	a5,a0
+  c0:	fef42423          	sw	a5,-24(s0)
+  c4:	fe842783          	lw	a5,-24(s0)
+  c8:	00078513          	mv	a0,a5
+  cc:	01813083          	ld	ra,24(sp)
+  d0:	01013403          	ld	s0,16(sp)
+  d4:	02010113          	add	sp,sp,32
+  d8:	00008067          	ret

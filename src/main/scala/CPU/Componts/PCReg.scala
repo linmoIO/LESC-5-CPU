@@ -15,7 +15,7 @@ import CPU._
  * [[output]]
  *   - out : 输出当前 PC
  */
-class PCReg extends Module {
+class PCReg(startAddress: Int = 0x0) extends Module {
   val io = IO(new Bundle {
     /* input */
     val in = Input(UInt(XLEN.W))
@@ -23,12 +23,26 @@ class PCReg extends Module {
     val out = Output(UInt(XLEN.W))
   })
 
-  val pcReg = RegInit(UInt(XLEN.W), START_ADDRESS.U)
+  val pcReg = RegInit(UInt(XLEN.W), startAddress.U)
 
   pcReg := io.in
   io.out := pcReg
 
   // **************** print **************** //
-  if (DebugConfig.PCRegIOPrint)
-    CPUPrintf.printfForIO(io, "Hex")
+  val needBinary = List()
+  val needDec = List()
+  val needHex = List(io.in, io.out)
+  val needBool = io.getElements.filter(data => data.isInstanceOf[Bool]).toList
+
+  if (DebugControl.PCRegIOPrint) {
+    CPUPrintf.printfIO(
+      "INFO",
+      this,
+      io.getElements.toList,
+      needBinary,
+      needDec,
+      needHex,
+      needBool
+    )
+  }
 }

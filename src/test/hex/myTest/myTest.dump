@@ -1,0 +1,27 @@
+
+myTest：     文件格式 elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000000 <main>:
+   0:	fe010113          	add	sp,sp,-32
+   4:	00813c23          	sd	s0,24(sp)
+   8:	02010413          	add	s0,sp,32
+   c:	06100793          	li	a5,97
+  10:	fef407a3          	sb	a5,-17(s0)
+  14:	06200793          	li	a5,98
+  18:	fef40723          	sb	a5,-18(s0)
+  1c:	06300793          	li	a5,99
+  20:	fef406a3          	sb	a5,-19(s0)
+  24:	fef44783          	lbu	a5,-17(s0)
+  28:	fef40623          	sb	a5,-20(s0)
+  2c:	fee44783          	lbu	a5,-18(s0)
+  30:	fef40623          	sb	a5,-20(s0)
+  34:	fed44783          	lbu	a5,-19(s0)
+  38:	fef40623          	sb	a5,-20(s0)
+  3c:	00000793          	li	a5,0
+  40:	00078513          	mv	a0,a5
+  44:	01813403          	ld	s0,24(sp)
+  48:	02010113          	add	sp,sp,32
+  4c:	00008067          	ret

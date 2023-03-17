@@ -43,7 +43,7 @@ class ALUControlUnit extends Module {
   })
 
   // funct3 | inst[30]
-  val combine = WireDefault(ALUOperation2Opcode.getBOpcodeDefault().U(4.W))
+  val combine = WireDefault(ALUOpWithCode.getBCodeDefault().U(4.W))
 
   when(io.isRType === true.B) {
     combine := Cat(io.funct3, io.funct7(5))
@@ -60,9 +60,21 @@ class ALUControlUnit extends Module {
   io.aluOperation := Cat(combine, io.isWord, io.isBType)
 
   // **************** print **************** //
-  if (DebugConfig.ALUControlUnitIOPrint) {
-    CPUPrintf.printfForIO(io, "")
-    // CPUPrintf.printfForIOArg(combine, "")
+  val needBinary = List(io.funct3, io.funct7, io.aluOperation)
+  val needDec = List()
+  val needHex = List()
+  val needBool = io.getElements.filter(data => data.isInstanceOf[Bool]).toList
+
+  if (DebugControl.ALUControlUnitIOPrint) {
+    CPUPrintf.printfIO(
+      "INFO",
+      this,
+      io.getElements.toList,
+      needBinary,
+      needDec,
+      needHex,
+      needBool
+    )
   }
 
 }

@@ -9,8 +9,9 @@ import chiseltest.ChiselScalatestTester
 import CPU.CPUConfig._
 
 trait TestFunctionPCReg {
-  def doTest(dut: PCReg) = {
-    var lastPC = START_ADDRESS
+
+  def doTest(dut: PCReg, startAddress: Int) = {
+    var lastPC = startAddress
     for (i <- 1 until 100) {
       dut.io.out.expect(lastPC.U)
 
@@ -27,9 +28,10 @@ class PCRegTester
     with ChiselScalatestTester
     with TestFunctionPCReg {
   "Test" should "pass" in {
-    test(new PCReg()) { dut =>
+    val startAddress = 0x0
+    test(new PCReg(startAddress)) { dut =>
       {
-        doTest(dut)
+        doTest(dut, startAddress)
       }
     }
   }

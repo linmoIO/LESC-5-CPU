@@ -45,7 +45,7 @@ trait TestFuncControlUnit {
       dut.io.immALUToReg.expect(t._8.asUInt.asBool)
       dut.io.memRead.expect((t._9 == 2).asBool)
       dut.io.memWrite.expect((t._9 == 3).asBool)
-      dut.io.memValid.expect((t._9 / 2).asUInt.asBool)
+      // dut.io.memValid.expect((t._9 / 2).asUInt.asBool)
       dut.io.memRead.expect(t._10.asUInt.asBool)
       dut.io.ifWriteToReg.expect(t._11.asUInt.asBool)
       dut.io.isValidInst.expect(t._12.asUInt.asBool)

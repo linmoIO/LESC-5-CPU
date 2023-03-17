@@ -1,7 +1,9 @@
 package CPU.Componts
 
 import chisel3._
+
 import CPU.CPUConfig._
+import CPU._
 
 /**
  * <b>[[结果选择单元]]</b>
@@ -47,4 +49,22 @@ class ResSelectUnit extends Module {
   }
 
   io.out := resWire
+
+  // **************** print **************** //
+  val needBinary = List()
+  val needDec = List(io.readData, io.aluResult, io.imm, io.pcPlus4, io.out)
+  val needHex = List()
+  val needBool = io.getElements.filter(data => data.isInstanceOf[Bool]).toList
+
+  if (DebugControl.ResSelectUnitIOPrint) {
+    CPUPrintf.printfIO(
+      "INFO",
+      this,
+      io.getElements.toList,
+      needBinary,
+      needDec,
+      needHex,
+      needBool
+    )
+  }
 }

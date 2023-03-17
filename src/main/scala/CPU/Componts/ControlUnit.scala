@@ -26,8 +26,6 @@ import CPU._
  *
  *   - memRead : 是否需要从 DataMemory 中读取数据
  *   - memWrite : 是否需要向 DataMemory 中写入数据
- *   - memValid : 是否要对 DataMemory 进行操作,
- *                memValid = memRead BitOR memWrite
  *
  *   - immRs2ToALU : 控制 ALU.y 的输入
  *              1 for immediate, 0 for RegUnit.readDataRs2
@@ -50,16 +48,21 @@ class ControlUnit extends Module {
     val isJALR = Output(Bool())
     val isBType = Output(Bool())
     val isJump = Output(Bool())
+
     val immALUToReg = Output(Bool())
+
     val memRead = Output(Bool())
     val memWrite = Output(Bool())
-    val memValid = Output(Bool())
+
     val immRs2ToALU = Output(Bool())
     val pcRs1ToALU = Output(Bool())
+
     val isIType = Output(Bool())
     val isRType = Output(Bool())
     val isWord = Output(Bool())
+
     val ifWriteToReg = Output(Bool())
+
     val isValidInst = Output(Bool())
   })
 
@@ -67,64 +70,64 @@ class ControlUnit extends Module {
 // format: off
     io.opcode,
     List( // default
-    //      isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B
+    //      isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B
     ),
     Array(
       // LUI, U-type : LUI
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.LUI)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, false.B, false.B, true.B,  false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.LUI)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, false.B, false.B, true.B,  false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  true.B
       ),
       // AUIPC, U-type : AUIPC
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.AUIPC)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  true.B,  false.B, false.B, false.B, true.B,  true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.AUIPC)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, false.B, false.B, false.B, false.B, false.B, true.B,  true.B,  false.B, false.B, false.B, true.B,  true.B
       ),
       // JAL, J-type : JAL
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.JAL)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, false.B, true.B,  false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.JAL)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, false.B, true.B,  false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  true.B
       ),
       // JALR, I-type : JALR
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.JALR)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            true.B,  false.B, true.B,  false.B, false.B, false.B, false.B, true.B,  false.B, false.B, false.B, false.B, true.B,  true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.JALR)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            true.B,  false.B, true.B,  false.B, false.B, false.B, true.B,  false.B, false.B, false.B, false.B, true.B,  true.B
       ),
       // B-type, B-type : BEQ, BNE, BLT, BGE, BLTU, BGEU
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.BType)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, true.B,  false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.BType)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, true.B,  false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B
       ),
       // Load, I-type : LB, LH, LW, LD, LBU, LHU, LWU
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.Load)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, false.B, false.B, false.B, true.B,  false.B, true.B,  true.B,  false.B, false.B, false.B, false.B, true.B,  true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.Load)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, false.B, false.B, false.B, true.B,  false.B, true.B,  false.B, false.B, false.B, false.B, true.B,  true.B
       ),
       // Store, S-type : SB, SH, SW, SD
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.Store)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, false.B, false.B, false.B, false.B, true.B,  true.B,  true.B,  false.B, false.B, false.B, false.B, false.B, true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.Store)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, false.B, false.B, false.B, false.B, true.B,  true.B,  false.B, false.B, false.B, false.B, false.B, true.B
       ),
       // I-type(64), I-type : ADDI, SLTI, SLTIU, XORI, ORI, ANDI, SLLI, SRLI, SRAI
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.IType)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  false.B, true.B,  false.B, false.B, true.B,  true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.IType)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, false.B, false.B, false.B, false.B, false.B, true.B,  false.B, true.B,  false.B, false.B, true.B,  true.B
       ),
       // I-type(32), I-type : ADDIW, SLLIW, SRLIW, SRAIW
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.ITypeW)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  false.B, true.B,  false.B, true.B,  true.B,  true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.ITypeW)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, false.B, false.B, false.B, false.B, false.B, true.B,  false.B, true.B,  false.B, true.B,  true.B,  true.B
       ),
       // R-type(64), R-type : ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.RType)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  false.B, true.B,  true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.RType)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  false.B, true.B,  true.B
       ),
       // R-type(32), R-type : ADDW, SUBW, SLLW, SRLW, SRAW
-      BitPat(InstKind2Opcode.getBOpcode(InstKind.RTypeW)) -> List(
-      //    isJALR   isBType  isJump immALUToReg memRead memWrite memValid immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
-            false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  true.B,  true.B,  true.B
+      BitPat(InstKindWithCode.getBCode(InstKind.RTypeW)) -> List(
+      //    isJALR   isBType  isJump immALUToReg memRead memWrite immRs2   pcRs1    isIType  isRType  isWord  ifWriteToReg isValid
+            false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, false.B, true.B,  true.B,  true.B,  true.B
       )
     )
 // format: on
@@ -136,16 +139,29 @@ class ControlUnit extends Module {
   io.immALUToReg := controlSignals(3)
   io.memRead := controlSignals(4)
   io.memWrite := controlSignals(5)
-  io.memValid := controlSignals(6)
-  io.immRs2ToALU := controlSignals(7)
-  io.pcRs1ToALU := controlSignals(8)
-  io.isIType := controlSignals(9)
-  io.isRType := controlSignals(10)
-  io.isWord := controlSignals(11)
-  io.ifWriteToReg := controlSignals(12)
-  io.isValidInst := controlSignals(13)
+  io.immRs2ToALU := controlSignals(6)
+  io.pcRs1ToALU := controlSignals(7)
+  io.isIType := controlSignals(8)
+  io.isRType := controlSignals(9)
+  io.isWord := controlSignals(10)
+  io.ifWriteToReg := controlSignals(11)
+  io.isValidInst := controlSignals(12)
 
   // **************** print **************** //
-  if (DebugConfig.ControlUnitIOPrint)
-    CPUPrintf.printfForIO(io)
+  val needBinary = List(io.opcode)
+  val needDec = List()
+  val needHex = List()
+  val needBool = io.getElements.filter(data => data.isInstanceOf[Bool]).toList
+
+  if (DebugControl.ControlUnitIOPrint) {
+    CPUPrintf.printfIO(
+      "INFO",
+      this,
+      io.getElements.toList,
+      needBinary,
+      needDec,
+      needHex,
+      needBool
+    )
+  }
 }

@@ -1,0 +1,72 @@
+
+fibonacci：     文件格式 elf64-littleriscv
+
+
+Disassembly of section .text:
+
+0000000000000000 <fibonacci>:
+   0:	fd010113          	add	sp,sp,-48
+   4:	02813423          	sd	s0,40(sp)
+   8:	03010413          	add	s0,sp,48
+   c:	00050793          	mv	a5,a0
+  10:	fcf42e23          	sw	a5,-36(s0)
+  14:	fdc42783          	lw	a5,-36(s0)
+  18:	0007871b          	sext.w	a4,a5
+  1c:	00100793          	li	a5,1
+  20:	00f70a63          	beq	a4,a5,34 <fibonacci+0x34>
+  24:	fdc42783          	lw	a5,-36(s0)
+  28:	0007871b          	sext.w	a4,a5
+  2c:	00200793          	li	a5,2
+  30:	00f71663          	bne	a4,a5,3c <fibonacci+0x3c>
+  34:	00100793          	li	a5,1
+  38:	0700006f          	j	a8 <fibonacci+0xa8>
+  3c:	00100793          	li	a5,1
+  40:	fef42623          	sw	a5,-20(s0)
+  44:	00100793          	li	a5,1
+  48:	fef42423          	sw	a5,-24(s0)
+  4c:	fe042223          	sw	zero,-28(s0)
+  50:	00300793          	li	a5,3
+  54:	fef42023          	sw	a5,-32(s0)
+  58:	0340006f          	j	8c <fibonacci+0x8c>
+  5c:	fec42783          	lw	a5,-20(s0)
+  60:	00078713          	mv	a4,a5
+  64:	fe842783          	lw	a5,-24(s0)
+  68:	00f707bb          	addw	a5,a4,a5
+  6c:	fef42223          	sw	a5,-28(s0)
+  70:	fe842783          	lw	a5,-24(s0)
+  74:	fef42623          	sw	a5,-20(s0)
+  78:	fe442783          	lw	a5,-28(s0)
+  7c:	fef42423          	sw	a5,-24(s0)
+  80:	fe042783          	lw	a5,-32(s0)
+  84:	0017879b          	addw	a5,a5,1
+  88:	fef42023          	sw	a5,-32(s0)
+  8c:	fe042783          	lw	a5,-32(s0)
+  90:	00078713          	mv	a4,a5
+  94:	fdc42783          	lw	a5,-36(s0)
+  98:	0007071b          	sext.w	a4,a4
+  9c:	0007879b          	sext.w	a5,a5
+  a0:	fae7dee3          	bge	a5,a4,5c <fibonacci+0x5c>
+  a4:	fe442783          	lw	a5,-28(s0)
+  a8:	00078513          	mv	a0,a5
+  ac:	02813403          	ld	s0,40(sp)
+  b0:	03010113          	add	sp,sp,48
+  b4:	00008067          	ret
+
+00000000000000b8 <main>:
+  b8:	fe010113          	add	sp,sp,-32
+  bc:	00113c23          	sd	ra,24(sp)
+  c0:	00813823          	sd	s0,16(sp)
+  c4:	02010413          	add	s0,sp,32
+  c8:	01100793          	li	a5,17
+  cc:	fef42623          	sw	a5,-20(s0)
+  d0:	fec42783          	lw	a5,-20(s0)
+  d4:	00078513          	mv	a0,a5
+  d8:	f29ff0ef          	jal	0 <fibonacci>
+  dc:	00050793          	mv	a5,a0
+  e0:	fef42423          	sw	a5,-24(s0)
+  e4:	fe842783          	lw	a5,-24(s0)
+  e8:	00078513          	mv	a0,a5
+  ec:	01813083          	ld	ra,24(sp)
+  f0:	01013403          	ld	s0,16(sp)
+  f4:	02010113          	add	sp,sp,32
+  f8:	00008067          	ret
