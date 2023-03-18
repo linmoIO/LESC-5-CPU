@@ -340,9 +340,9 @@ project/plugins/project/
 hs_err_pid*
 
 # 需要额外忽略的文件夹
-.bloop
-.github
-.metals
-.vscode
+.bloop/
+.github/
+.metals/
+.vscode/
 
 
