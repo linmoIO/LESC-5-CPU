@@ -339,3 +339,10 @@ project/plugins/project/
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
+# 需要额外忽略的文件夹
+.bloop
+.github
+.metals
+.vscode
+
+
