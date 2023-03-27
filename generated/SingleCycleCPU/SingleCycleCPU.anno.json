@@ -1,0 +1,22 @@
+[
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~SingleCycleCPU|Adder",
+    "duplicate":"~SingleCycleCPU|SingleCycleCPU/pcAdd4:Adder",
+    "index":0.08333333333333333
+  },
+  {
+    "class":"firrtl.transforms.DedupedResult",
+    "original":"~SingleCycleCPU|Adder_1",
+    "duplicate":"~SingleCycleCPU|SingleCycleCPU/pcAddImm:Adder",
+    "index":0.16666666666666666
+  },
+  {
+    "class":"firrtl.EmitCircuitAnnotation",
+    "emitter":"firrtl.VerilogEmitter"
+  },
+  {
+    "class":"firrtl.transforms.BlackBoxTargetDirAnno",
+    "targetDir":"generated/SingleCycleCPU"
+  }
+]

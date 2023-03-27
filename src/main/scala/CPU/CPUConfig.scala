@@ -78,7 +78,7 @@ object CPUConfig {
  * <p>
  */
 object DebugControl {
-  /* 组件 IO 打印信息控制 */
+  /* 组件打印信息控制 */
   val ALUIOPrint = false
   val ALUControlUnitIOPrint = false
   val ControlUnitIOPrint = false
@@ -90,8 +90,19 @@ object DebugControl {
   val RegUnitIOPrint = false
   val ResSelectUnitIOPrint = false
 
+  /* 流水线寄存器组打印信息控制 */
+  val IFIDStageRegsIOPrint = false
+  val IDEXEStageRegsIOPrint = false
+  val EXEMEMStageRegsIOPrint = false
+  val MEMWBStageRegsIOPrint = false
+
+  /* 流水线控制器打印信息控制 */
+  val BranchControlUnitIOPrint = false
+  val DataControlUnitIOPrint = false
+
   /* CPU 打印信息控制 */
   val SingleCycleCPUPrint = false
+  val PiplineCPUPrint = false
   val RegPrint = false // 32 个寄存器状态打印
 }
 

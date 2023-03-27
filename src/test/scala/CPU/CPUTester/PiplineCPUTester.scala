@@ -17,8 +17,9 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import firrtl.FileUtils
 
-import CPU.SingleCycleCPU.SingleCycleCPU
-trait TestFuncSingleCycleCPU {
+import CPU.PiplineCPU.PiplineCPU
+
+trait TestFuncPiplineCPU {
 
   /* 控制信号 */
   val printToFile = true // 是否打印到文件
@@ -29,42 +30,71 @@ trait TestFuncSingleCycleCPU {
   val printReg = DebugControl.RegPrint // 是否打印 32 个寄存器状态
   var printAll = true // 是否由 Tester 打印 CPU 的详细信息
 
-  def testFn(dut: SingleCycleCPU, myPrint: Any => Unit) = {
+  def testFn(dut: PiplineCPU, myPrint: Any => Unit) = {
     var i = 1 // 当前周期数
 
     myPrint(s"[INFO] 开始测试 ${dut.name}\n")
 
     dut.clock.setTimeout(timeOut) // 设置超时
 
-    while (dut.io.inst.peekInt() != 0) {
+    // dut.clock.step(1)
+
+    while (
+      (dut.io.ifInst.peekInt() != 0 || dut.io.idInst
+        .peekInt() != 0 || dut.io.exeInst.peekInt() != 0 || dut.io.memInst
+        .peekInt() != 0 || dut.io.wbInst.peekInt() != 0)
+    ) {
       val errorPrefix = s"[ERROR] 当前为第 ${i} 个周期, " // 打印的前缀信息
 
-      // 指令应该恒有效
-      dut.io.isValidInst
-        .expect(true.B, errorPrefix + s"指令 0x${Hexadecimal(dut.io.inst)} 无效")
+      // // 指令应该恒有效
+      // dut.io.isValidInst
+      //   .expect(true.B, errorPrefix + s"指令 0x${Hexadecimal(dut.io.inst)} 无效")
+
+      val ifInstB =
+        stringFixUpToN(dut.io.ifInst.peekInt().toLong.toBinaryString, 32)
+      def getKind(port: UInt) = {
+        InstKindWithCode.getInstKind(
+          stringFixUpToN(
+            (port.peekInt() & 0x7f).toLong.toBinaryString,
+            7
+          )
+        )
+      }
+      val ifInstKind = getKind(dut.io.ifInst)
+      val idInstKind = getKind(dut.io.idInst)
+      val exeInstKind = getKind(dut.io.exeInst)
+      val memInstKind = getKind(dut.io.memInst)
+      val wbInstKind = getKind(dut.io.wbInst)
 
       if (printInstPC || printAll) {
         myPrint("————————————————— [ CPU - INFO ] ——————————————————\n")
 
-        val instB =
-          stringFixUpToN(dut.io.inst.peekInt().toLong.toBinaryString, 32)
-        val instKind = InstKindWithCode.getInstKind(
-          stringFixUpToN(dut.io.opcode.peekInt().toLong.toBinaryString, 7)
-        )
-
         myPrint(
           s"[Brief] : "
-            + s"PC = 0x${dut.io.pc.peekInt().toLong.toHexString}, "
+            + s"PC = 0x${dut.io.ifPC.peekInt().toLong.toHexString}, "
             + s"Next PC = 0x${dut.io.nextPC.peekInt().toLong.toHexString}, "
             + s"第 ${i} 个时钟周期\n"
-            + s"\tINST = 0x${stringFixUpToN(dut.io.inst.peekInt().toLong.toHexString, INST_W / 8)}  (${instKind})\n"
-            + s"\t     = ${instB.substring(0, 7) + " " + instB.substring(7, 12) + " " + instB
-                .substring(12, 17) + " " + instB.substring(17, 20) + " " + instB
-                .substring(20, 25) + " " + instB.substring(25)}\n"
+            + s"\tINST = 0x${stringFixUpToN(dut.io.ifInst.peekInt().toLong.toHexString, INST_W / 8)}  (${ifInstKind})\n"
+            + s"\t     = ${ifInstB.substring(0, 7) + " " + ifInstB.substring(7, 12) + " " + ifInstB
+                .substring(12, 17) + " " + ifInstB.substring(17, 20) + " " + ifInstB
+                .substring(20, 25) + " " + ifInstB.substring(25)}\n"
             + "\n"
         )
       }
+      def printStage(
+          stageName: String,
+          pc: UInt,
+          inst: UInt,
+          instKind: Any
+      ) = {
+        myPrint(
+          s"==== [ ${stageName} ] ==== "
+            + s"[PC = 0x${pc.peekInt().toLong.toHexString}, "
+            + s"INST = 0x${stringFixUpToN(inst.peekInt().toLong.toHexString, INST_W / 8)} (${instKind})]\n"
+        )
+      }
       if (printAll && i > begin && (i < end || end == 0)) {
+        printStage("ID", dut.io.idPC, dut.io.idInst, idInstKind)
         // --------------- 寄存器 --------------------------
         val rs1 = dut.io.rs1.peekInt().toLong.toInt
         val rs1Name = RegNameWithNum.getRegName(rs1)
@@ -110,6 +140,7 @@ trait TestFuncSingleCycleCPU {
           s"[Immediate] : ${dut.io.imm.peekInt().toLong}  (0x${dut.io.imm.peekInt().toLong.toHexString}) \n\n"
         )
 
+        printStage("EXE", dut.io.exePC, dut.io.exeInst, exeInstKind)
         // --------------- ALU --------------------------
         val aluCode = stringFixUpToN(
           dut.io.aluOperation.peekInt().toLong.toBinaryString,
@@ -147,6 +178,7 @@ trait TestFuncSingleCycleCPU {
             + "\n"
         )
 
+        printStage("MEM", dut.io.memPC, dut.io.memInst, memInstKind)
         // --------------- 内存 --------------------------
         myPrint(
           s"[内存] : "
@@ -155,9 +187,9 @@ trait TestFuncSingleCycleCPU {
         )
         if (dut.io.memWrite.peekBoolean()) {
           myPrint(
-            s"\t向内存 0x${dut.io.aluResult.peekInt().toLong.toHexString} 中写入数据\t ${dut.io.readDataRs2
+            s"\t向内存 0x${dut.io.address.peekInt().toLong.toHexString} 中写入数据\t ${dut.io.writeData
                 .peekInt()
-                .toLong}  (0x${dut.io.readDataRs2.peekInt().toLong.toHexString}) \n"
+                .toLong}  (0x${dut.io.writeData.peekInt().toLong.toHexString}) \n"
           )
         } else if (dut.io.memRead.peekBoolean()) {
           myPrint(
@@ -171,6 +203,7 @@ trait TestFuncSingleCycleCPU {
         }
         myPrint("\n")
 
+        printStage("WB", dut.io.wbPC, dut.io.wbInst, wbInstKind)
         // --------------- Res 选择器 --------------------------
         myPrint(
           s"[Res 选择器] : "
@@ -190,13 +223,15 @@ trait TestFuncSingleCycleCPU {
   }
 }
 
-class SingleCycleCPUTester
+class PiplineCPUTester
     extends AnyFlatSpec
     with ChiselScalatestTester
     with TestcaseSet
-    with TestFuncSingleCycleCPU {
+    with TestFuncPiplineCPU {
 
   "CPU" should "pass" in {
+    // sbt "testOnly CPU.CPUTester.PiplineCPUTester" > src/test/hex/fibonacci/pipline_stage.log
+
     for (testcasePair <- testcases) {
       val dir = s"${System
           .getProperty("user.dir")}/${testcasePair._1}"
@@ -238,7 +273,7 @@ class SingleCycleCPUTester
       var outFile: PrintWriter = null
 
       if (printToFile) {
-        val filePath = s"${dir}/${fileName}.log"
+        val filePath = s"${dir}/${fileName}_pipline.log"
         println(s"[INFO] 将 CPU 输出信息写入到 ${filePath} 中")
 
         outFile = new PrintWriter(filePath)
@@ -246,7 +281,7 @@ class SingleCycleCPUTester
       }
 
       val dataPathFinal = if (needData) dataPath else ""
-      test(new SingleCycleCPU(instPath, dataPathFinal, startAddress)) { dut =>
+      test(new PiplineCPU(instPath, dataPathFinal, startAddress)) { dut =>
         testFn(dut, myPrint)
       }
 
@@ -255,142 +290,4 @@ class SingleCycleCPUTester
       }
     }
   }
-}
-
-trait TestcaseSet { // 测试集
-  val testcases = List(
-    /* dir, fileName, startAddress */
-
-    ("src/test/hex/fibonacci_recursion", "fibonacci_recursion", 0x98), // 耗时比较长
-    ("src/test/hex/fibonacci", "fibonacci", 0xb8),
-    ("src/test/hex/myTest", "myTest", 0x0),
-
-    /* dino */
-    ("src/test/hex/dino/target/add0", "add0", 0x0),
-    ("src/test/hex/dino/target/add1", "add1", 0x0),
-    ("src/test/hex/dino/target/add2", "add2", 0x0),
-    ("src/test/hex/dino/target/addfwd", "addfwd", 0x0),
-    ("src/test/hex/dino/target/addi-funct7", "addi-funct7", 0x0),
-    ("src/test/hex/dino/target/addi1", "addi1", 0x0),
-    ("src/test/hex/dino/target/addi2", "addi2", 0x0),
-    ("src/test/hex/dino/target/addiw1", "addiw1", 0x0),
-    ("src/test/hex/dino/target/addiw2", "addiw2", 0x0),
-    ("src/test/hex/dino/target/addiw3", "addiw3", 0x0),
-    ("src/test/hex/dino/target/addw1", "addw1", 0x0),
-    ("src/test/hex/dino/target/addw2", "addw2", 0x0),
-    ("src/test/hex/dino/target/addw3", "addw3", 0x0),
-    ("src/test/hex/dino/target/and", "and", 0x0),
-    ("src/test/hex/dino/target/andi", "andi", 0x0),
-    ("src/test/hex/dino/target/auipc0", "auipc0", 0x0),
-    ("src/test/hex/dino/target/auipc1", "auipc1", 0x0),
-    ("src/test/hex/dino/target/auipc2", "auipc2", 0x0),
-    ("src/test/hex/dino/target/auipc3", "auipc3", 0x0),
-    ("src/test/hex/dino/target/beq", "beq", 0x0),
-    ("src/test/hex/dino/target/beqfwd1", "beqfwd1", 0x0),
-    ("src/test/hex/dino/target/beqfwd2", "beqfwd2", 0x0),
-    ("src/test/hex/dino/target/bge", "bge", 0x0),
-    ("src/test/hex/dino/target/bgeu", "bgeu", 0x0),
-    ("src/test/hex/dino/target/blt", "blt", 0x0),
-    ("src/test/hex/dino/target/bltu", "bltu", 0x0),
-    ("src/test/hex/dino/target/bne", "bne", 0x0),
-    ("src/test/hex/dino/target/dual_add1", "dual_add1", 0x0),
-    ("src/test/hex/dino/target/dual_addfwd1", "dual_addfwd1", 0x0),
-    ("src/test/hex/dino/target/dual_addfwd2", "dual_addfwd2", 0x0),
-    ("src/test/hex/dino/target/dual_addfwd3", "dual_addfwd3", 0x0),
-    ("src/test/hex/dino/target/dual_addfwd5", "dual_addfwd5", 0x0),
-    ("src/test/hex/dino/target/dual_addfwd4", "dual_addfwd4", 0x0),
-    ("src/test/hex/dino/target/jal", "jal", 0x0),
-    ("src/test/hex/dino/target/jalr1", "jalr1", 0x0),
-    ("src/test/hex/dino/target/lui0", "lui0", 0x0),
-    ("src/test/hex/dino/target/lui1", "lui1", 0x0),
-    ("src/test/hex/dino/target/oppsign", "oppsign", 0x0),
-    ("src/test/hex/dino/target/or", "or", 0x0),
-    ("src/test/hex/dino/target/ori", "ori", 0x0),
-    ("src/test/hex/dino/target/power2", "power2", 0x0),
-    ("src/test/hex/dino/target/rotR", "rotR", 0x0),
-    ("src/test/hex/dino/target/sll", "sll", 0x0),
-    ("src/test/hex/dino/target/sll2", "sll2", 0x0),
-    ("src/test/hex/dino/target/slli", "slli", 0x0),
-    ("src/test/hex/dino/target/slli2", "slli2", 0x0),
-    ("src/test/hex/dino/target/slliw1", "slliw1", 0x0),
-    ("src/test/hex/dino/target/slliw2", "slliw2", 0x0),
-    ("src/test/hex/dino/target/slliw3", "slliw3", 0x0),
-    ("src/test/hex/dino/target/sllw1", "sllw1", 0x0),
-    ("src/test/hex/dino/target/sllw2", "sllw2", 0x0),
-    ("src/test/hex/dino/target/sllw3", "sllw3", 0x0),
-    ("src/test/hex/dino/target/sllw4", "sllw4", 0x0),
-    ("src/test/hex/dino/target/slt", "slt", 0x0),
-    ("src/test/hex/dino/target/slt1", "slt1", 0x0),
-    ("src/test/hex/dino/target/slti", "slti", 0x0),
-    ("src/test/hex/dino/target/sltiu", "sltiu", 0x0),
-    ("src/test/hex/dino/target/sltu", "sltu", 0x0),
-    ("src/test/hex/dino/target/sltu1", "sltu1", 0x0),
-    ("src/test/hex/dino/target/sra", "sra", 0x0),
-    ("src/test/hex/dino/target/srai", "srai", 0x0),
-    ("src/test/hex/dino/target/sraiw1", "sraiw1", 0x0),
-    ("src/test/hex/dino/target/sraiw2", "sraiw2", 0x0),
-    ("src/test/hex/dino/target/sraw1", "sraw1", 0x0),
-    ("src/test/hex/dino/target/sraw2", "sraw2", 0x0),
-    ("src/test/hex/dino/target/sraw3", "sraw3", 0x0),
-    ("src/test/hex/dino/target/srl", "srl", 0x0),
-    ("src/test/hex/dino/target/srl2", "srl2", 0x0),
-    ("src/test/hex/dino/target/srli", "srli", 0x0),
-    ("src/test/hex/dino/target/srli2", "srli2", 0x0),
-    ("src/test/hex/dino/target/srliw1", "srliw1", 0x0),
-    ("src/test/hex/dino/target/srliw2", "srliw2", 0x0),
-    ("src/test/hex/dino/target/srliw3", "srliw3", 0x0),
-    ("src/test/hex/dino/target/srlw1", "srlw1", 0x0),
-    ("src/test/hex/dino/target/srlw2", "srlw2", 0x0),
-    ("src/test/hex/dino/target/srlw3", "srlw3", 0x0),
-    ("src/test/hex/dino/target/srlw4", "srlw4", 0x0),
-    ("src/test/hex/dino/target/sub", "sub", 0x0),
-    ("src/test/hex/dino/target/subw1", "subw1", 0x0),
-    ("src/test/hex/dino/target/subw2", "subw2", 0x0),
-    ("src/test/hex/dino/target/subw3", "subw3", 0x0),
-    ("src/test/hex/dino/target/swapxor", "swapxor", 0x0),
-    ("src/test/hex/dino/target/xor", "xor", 0x0),
-    ("src/test/hex/dino/target/xori", "xori", 0x0),
-
-    /* 含 data 的指令 */
-    ("src/test/hex/dino/target/lwfwd", "lwfwd", 0x0),
-    ("src/test/hex/dino/target/lh1", "lh1", 0x0),
-    ("src/test/hex/dino/target/lw1", "lw1", 0x0),
-    ("src/test/hex/dino/target/lb1", "lb1", 0x0),
-    ("src/test/hex/dino/target/sw", "sw", 0x0),
-    ("src/test/hex/dino/target/sd1", "sd1", 0x0),
-    ("src/test/hex/dino/target/lh", "lh", 0x0),
-    ("src/test/hex/dino/target/lb", "lb", 0x0),
-    ("src/test/hex/dino/target/sb", "sb", 0x0),
-    ("src/test/hex/dino/target/lbu", "lbu", 0x0),
-    ("src/test/hex/dino/target/sw2", "sw2", 0x0),
-    ("src/test/hex/dino/target/ld1", "ld1", 0x0),
-    ("src/test/hex/dino/target/sd2", "sd2", 0x0),
-    ("src/test/hex/dino/target/sh", "sh", 0x0),
-    ("src/test/hex/dino/target/lhu", "lhu", 0x0),
-    ("src/test/hex/dino/target/lwu", "lwu", 0x0),
-    ("src/test/hex/dino/target/lwu1", "lwu1", 0x0),
-    ("src/test/hex/dino/target/ld2", "ld2", 0x0),
-    // // ("src/test/hex/dino/target/sort", "sort", 0x0) // 代码有错误
-
-    /* 综合的 */
-    ("src/test/hex/dino/target/divider", "divider", 0x0),
-    ("src/test/hex/dino/target/ldfwd", "ldfwd", 0x0),
-    ("src/test/hex/dino/target/test", "test", 0x0),
-    ("src/test/hex/dino/target/swfwd1", "swfwd1", 0x0),
-    ("src/test/hex/dino/target/multiplier", "multiplier", 0x0),
-    ("src/test/hex/dino/target/naturalsum", "naturalsum", 0x0),
-    ("src/test/hex/dino/target/fibonacci", "fibonacci", 0x0),
-    ("src/test/hex/dino/target/swfwd2", "swfwd2", 0x0)
-
-    /* 尚未实现的指令 */
-    // ("src/test/hex/dino/target/ebreak", "ebreak", 0x0),
-    // ("src/test/hex/dino/target/csrrw", "csrrw", 0x0),
-    // ("src/test/hex/dino/target/ecall", "ecall", 0x0),
-    // ("src/test/hex/dino/target/csrrs", "csrrs", 0x0),
-    // ("src/test/hex/dino/target/csrrwi", "csrrwi", 0x0),
-    // ("src/test/hex/dino/target/csrrc", "csrrc", 0x0),
-    // ("src/test/hex/dino/target/csrrci", "csrrci", 0x0),
-    // ("src/test/hex/dino/target/csrrsi", "csrrsi", 0x0),
-    // ("src/test/hex/dino/target/mret", "mret", 0x0),
-  )
 }

@@ -1,12 +1,12 @@
-package CPU
+package CPU.SingleCycleCPU
 
 import chisel3._
 import chisel3.util._
 
 import CPU.Adder
 import CPU.CPUConfig._
-import Componts._
-import dataclass.data
+import CPU.Componts._
+import CPU.DebugControl
 
 /**
   * <b>[[关于 CPU 的说明]]</b>
@@ -44,7 +44,7 @@ class SingleCycleCPU(
     // ALU 计算
     val aluOperation = Output(UInt(ALU_OPERATION_W.W))
     val imm = Output(UInt(XLEN.W))
-    val resultALU = Output(UInt(XLEN.W)) // ALU 计算结果
+    val aluResult = Output(UInt(XLEN.W)) // ALU 计算结果
 
     // 控制信号组
     val opcode = Output(UInt(7.W))
@@ -100,7 +100,7 @@ class SingleCycleCPU(
   io.inst := instMemory.io.inst
   io.resultToReg := resSelectUnit.io.out
   io.readData := dataMemory.io.readData
-  io.resultALU := alu.io.result
+  io.aluResult := alu.io.result
 
   io.isTrue := pcSelectUnit.io.isTrue
   io.opcode := controlUnit.io.opcode
@@ -223,7 +223,7 @@ class SingleCycleCPU(
         + cf" B-Type = ${io.isBType}, Word = ${io.isWord}\n"
         + cf"\tpc |rs1 = ${io.pcRs1ToALU},\tx = ${Decimal(io.aluX.asSInt)} \n"
         + cf"\timm|rs2 = ${io.immRs2ToALU},\ty = ${Decimal(io.aluY.asSInt)} \n"
-        + cf"\tresult = ${io.resultALU}\n"
+        + cf"\tresult = ${io.aluResult}\n"
         + "\n"
     )
 
@@ -233,8 +233,8 @@ class SingleCycleCPU(
       cf"[内存] : "
         + cf"read = ${io.memRead}, memWrite = ${io.memWrite}, "
         + cf"bit-type = ${Binary(dataMemory.io.bitType)}, unsigned = ${dataMemory.io.isUnsigned}\n"
-        + cf"\t从 0x${Hexadecimal(io.resultALU)} 中读出数据 ${Decimal(io.readData)}\n"
-        + cf"\t往 0x${Hexadecimal(io.resultALU)} 中写入 ${Decimal(io.readDataRs2)}\n"
+        + cf"\t从 0x${Hexadecimal(io.aluResult)} 中读出数据 ${Decimal(io.readData)}\n"
+        + cf"\t往 0x${Hexadecimal(io.aluResult)} 中写入 ${Decimal(io.readDataRs2)}\n"
         + "\n"
     )
 
@@ -268,7 +268,13 @@ class SingleCycleCPU(
 object SingleCycleCPU {
   def main(args: Array[String]) = {
     print(getVerilogString(new SingleCycleCPU()))
-    emitVerilog(new SingleCycleCPU(), Array("--target-dir", "generated"))
+    emitVerilog(
+      new SingleCycleCPU(),
+      Array(
+        "--target-dir",
+        s"generated/${SingleCycleCPU.toString().split('$')(0).split('.').last}"
+      )
+    )
     print("\n[Success]\n")
   }
 }

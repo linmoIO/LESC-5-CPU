@@ -6,6 +6,33 @@ import CPU.CPUConfig._
 import CPU._
 
 /**
+  * 单周期不允许写时读, 否则会产生回环
+  *
+  */
+class RegUnit() extends RegUnitNormal {
+  readDataRs1 := regGroup(io.rs1)
+  readDataRs2 := regGroup(io.rs2)
+}
+
+/**
+  * 带读写转发版本, 供多周期使用
+  *
+  */
+class RegUnitWithForwarding() extends RegUnitNormal {
+  readDataRs1 := Mux(
+    (io.writeEnable && (io.rs1 === io.rd)),
+    io.writeData,
+    regGroup(io.rs1)
+  )
+
+  readDataRs2 := Mux(
+    (io.writeEnable && (io.rs2 === io.rd)),
+    io.writeData,
+    regGroup(io.rs2)
+  )
+}
+
+/**
  * <b>[[寄存器单元]]</b>
  * <p>
  * 由 32 个寄存器形成的寄存器单元, 执行 读/写寄存器 的操作,
@@ -23,7 +50,7 @@ import CPU._
  *   - readDataRs1 : 从 rs1 中读出的数据
  *   - readDataRs2 : 从 rs2 中读出的数据
  */
-class RegUnit extends Module {
+class RegUnitNormal() extends Module {
   val io = IO(new Bundle {
     /* input */
     val rs1 = Input(UInt(5.W))
@@ -46,22 +73,38 @@ class RegUnit extends Module {
 
   val regGroup = RegInit(VecInit(regInitSeq))
 
-  // X0 读出的数据为 0
-  io.readDataRs1 := Mux(io.rs1 === 0.U, 0.U, regGroup(io.rs1))
-  io.readDataRs2 := Mux(io.rs2 === 0.U, 0.U, regGroup(io.rs2))
+  val readDataRs1 = WireDefault(0.U(XLEN.W))
+  val readDataRs2 = WireDefault(0.U(XLEN.W))
 
-  // 此处不允许写时读, 否则会产生回环
+  // // 单周期不允许写时读, 否则会产生回环
+  // // 多周期允许
   // // 考虑写时读的问题, 读写转发
-  // io.readDataRs1 := Mux(
-  //   (io.writeEnable && (io.rs1 === io.rd)),
-  //   io.writeData,
-  //   regGroup(io.rs1)
-  // )
-  // io.readDataRs2 := Mux(
-  //   (io.writeEnable && (io.rs2 === io.rd)),
-  //   io.writeData,
-  //   regGroup(io.rs2)
-  // )
+  // when(io.forwarding === true.B) {
+  //   readDataRs1 := Mux(
+  //     (io.writeEnable && (io.rs1 === io.rd)),
+  //     io.writeData,
+  //     regGroup(io.rs1)
+  //   )
+
+  //   readDataRs2 := Mux(
+  //     (io.writeEnable && (io.rs2 === io.rd)),
+  //     io.writeData,
+  //     regGroup(io.rs2)
+  //   )
+  // }.otherwise {
+  //   readDataRs1 := regGroup(io.rs1)
+  //   readDataRs2 := regGroup(io.rs2)
+  // }
+
+  // X0 读出的数据为 0
+  io.readDataRs1 := Mux(io.rs1 === 0.U, 0.U, readDataRs1)
+  io.readDataRs2 := Mux(io.rs2 === 0.U, 0.U, readDataRs2)
+
+  // printf(cf"[DEBUG] sp = ${Decimal(regGroup(2.U))}\n")
+  // printf(cf"[DEBUG] readDataRs1 = ${Decimal(readDataRs1)}\n")
+  // printf(cf"[DEBUG] readDataRs2 = ${Decimal(readDataRs2)}\n")
+  // printf(cf"[DEBUG] Rs1 = ${Decimal(io.readDataRs1)}\n")
+  // printf(cf"[DEBUG] Rs2 = ${Decimal(io.readDataRs2)}\n")
 
   // x0 不允许写
   when(io.writeEnable === true.B && io.rd =/= 0.U) {
@@ -83,7 +126,7 @@ class RegUnit extends Module {
     List(io.writeData, io.readDataRs1, io.readDataRs2, rs1UInt, rs2UInt, rdUInt)
   val needHex = List()
   val needBool = io.getElements.filter(data => data.isInstanceOf[Bool]).toList
-  val needDelete = List(io.rs1, io.rs2, io.rd)
+  val needDelete = List(io.rs1, io.rs2, io.rd, io.regAll)
   val needAdd = List(rs1UInt, rs2UInt, rdUInt)
 
   if (DebugControl.RegUnitIOPrint) {

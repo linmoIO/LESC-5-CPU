@@ -96,10 +96,10 @@ object CPUPrintf {
         cf"${data.asUInt}"
       else
         cf"${data.asUInt}  (0x${Hexadecimal(data.asUInt)})"
-
     }
+
     printf(
-      cf"\t${data.toString().split(":")(0).split('.').last}\t= ${s}\n"
+      cf"\t${data.toString().split(":")(0).replace(".out.", ".[out]").replace(".in.", ".[in]").split('.').last}\t= ${s}\n"
     )
   }
 

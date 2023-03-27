@@ -8,20 +8,29 @@ Disassembly of section .text:
    0:	fe010113          	add	sp,sp,-32
    4:	00813c23          	sd	s0,24(sp)
    8:	02010413          	add	s0,sp,32
-   c:	06100793          	li	a5,97
-  10:	fef407a3          	sb	a5,-17(s0)
-  14:	06200793          	li	a5,98
-  18:	fef40723          	sb	a5,-18(s0)
-  1c:	06300793          	li	a5,99
-  20:	fef406a3          	sb	a5,-19(s0)
-  24:	fef44783          	lbu	a5,-17(s0)
-  28:	fef40623          	sb	a5,-20(s0)
-  2c:	fee44783          	lbu	a5,-18(s0)
-  30:	fef40623          	sb	a5,-20(s0)
-  34:	fed44783          	lbu	a5,-19(s0)
-  38:	fef40623          	sb	a5,-20(s0)
-  3c:	00000793          	li	a5,0
-  40:	00078513          	mv	a0,a5
-  44:	01813403          	ld	s0,24(sp)
-  48:	02010113          	add	sp,sp,32
-  4c:	00008067          	ret
+   c:	00300793          	li	a5,3
+  10:	fef42623          	sw	a5,-20(s0)
+  14:	0340006f          	j	48 <main+0x48>
+  18:	40002703          	lw	a4,1024(zero) # 400 <a>
+  1c:	40402783          	lw	a5,1028(zero) # 404 <b>
+  20:	00f707bb          	addw	a5,a4,a5
+  24:	0007871b          	sext.w	a4,a5
+  28:	40e02623          	sw	a4,1036(zero) # 40c <res>
+  2c:	40402703          	lw	a4,1028(zero) # 404 <b>
+  30:	40e02023          	sw	a4,1024(zero) # 400 <a>
+  34:	40c02703          	lw	a4,1036(zero) # 40c <res>
+  38:	40e02223          	sw	a4,1028(zero) # 404 <b>
+  3c:	fec42783          	lw	a5,-20(s0)
+  40:	0017879b          	addw	a5,a5,1
+  44:	fef42623          	sw	a5,-20(s0)
+  48:	40802703          	lw	a4,1032(zero) # 408 <n>
+  4c:	fec42783          	lw	a5,-20(s0)
+  50:	0007879b          	sext.w	a5,a5
+  54:	fcf752e3          	bge	a4,a5,18 <main+0x18>
+  58:	40c02783          	lw	a5,1036(zero) # 40c <res>
+  5c:	fef42423          	sw	a5,-24(s0)
+  60:	fe842783          	lw	a5,-24(s0)
+  64:	00078513          	mv	a0,a5
+  68:	01813403          	ld	s0,24(sp)
+  6c:	02010113          	add	sp,sp,32
+  70:	00008067          	ret

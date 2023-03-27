@@ -1,14 +1,14 @@
 [
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~SingleCycleCPU|Adder",
-    "duplicate":"~SingleCycleCPU|SingleCycleCPU/pcAdd4:Adder",
+    "original":"~SingleCycleCPUSimlify|Adder",
+    "duplicate":"~SingleCycleCPUSimlify|SingleCycleCPUSimlify/pcAdd4:Adder",
     "index":0.08333333333333333
   },
   {
     "class":"firrtl.transforms.DedupedResult",
-    "original":"~SingleCycleCPU|Adder_1",
-    "duplicate":"~SingleCycleCPU|SingleCycleCPU/pcAddImm:Adder",
+    "original":"~SingleCycleCPUSimlify|Adder_1",
+    "duplicate":"~SingleCycleCPUSimlify|SingleCycleCPUSimlify/pcAddImm:Adder",
     "index":0.16666666666666666
   },
   {
@@ -17,6 +17,6 @@
   },
   {
     "class":"firrtl.transforms.BlackBoxTargetDirAnno",
-    "targetDir":"generated"
+    "targetDir":"generated/SingleCycleCPUSimlify"
   }
 ]

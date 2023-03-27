@@ -4,6 +4,33 @@
 	.attribute unaligned_access, 0
 	.attribute stack_align, 16
 	.text
+	.globl	a
+	.section	.sdata,"aw"
+	.align	2
+	.type	a, @object
+	.size	a, 4
+a:
+	.word	1
+	.globl	b
+	.align	2
+	.type	b, @object
+	.size	b, 4
+b:
+	.word	2
+	.globl	n
+	.align	2
+	.type	n, @object
+	.size	n, 4
+n:
+	.word	27
+	.globl	res
+	.section	.sbss,"aw",@nobits
+	.align	2
+	.type	res, @object
+	.size	res, 4
+res:
+	.zero	4
+	.text
 	.align	2
 	.globl	main
 	.type	main, @function
@@ -11,19 +38,39 @@ main:
 	addi	sp,sp,-32
 	sd	s0,24(sp)
 	addi	s0,sp,32
-	li	a5,97
-	sb	a5,-17(s0)
-	li	a5,98
-	sb	a5,-18(s0)
-	li	a5,99
-	sb	a5,-19(s0)
-	lbu	a5,-17(s0)
-	sb	a5,-20(s0)
-	lbu	a5,-18(s0)
-	sb	a5,-20(s0)
-	lbu	a5,-19(s0)
-	sb	a5,-20(s0)
-	li	a5,0
+	li	a5,3
+	sw	a5,-20(s0)
+	j	.L2
+.L3:
+	lui	a5,%hi(a)
+	lw	a4,%lo(a)(a5)
+	lui	a5,%hi(b)
+	lw	a5,%lo(b)(a5)
+	addw	a5,a4,a5
+	sext.w	a4,a5
+	lui	a5,%hi(res)
+	sw	a4,%lo(res)(a5)
+	lui	a5,%hi(b)
+	lw	a4,%lo(b)(a5)
+	lui	a5,%hi(a)
+	sw	a4,%lo(a)(a5)
+	lui	a5,%hi(res)
+	lw	a4,%lo(res)(a5)
+	lui	a5,%hi(b)
+	sw	a4,%lo(b)(a5)
+	lw	a5,-20(s0)
+	addiw	a5,a5,1
+	sw	a5,-20(s0)
+.L2:
+	lui	a5,%hi(n)
+	lw	a4,%lo(n)(a5)
+	lw	a5,-20(s0)
+	sext.w	a5,a5
+	ble	a5,a4,.L3
+	lui	a5,%hi(res)
+	lw	a5,%lo(res)(a5)
+	sw	a5,-24(s0)
+	lw	a5,-24(s0)
 	mv	a0,a5
 	ld	s0,24(sp)
 	addi	sp,sp,32
