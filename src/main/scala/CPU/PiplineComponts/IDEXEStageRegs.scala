@@ -6,6 +6,9 @@ import CPU._
 import CPU.CPUPrintf
 import CPUConfig._
 
+/**
+ * ID -> EXE 阶段的寄存器组的 IO
+ */
 class IDEXEStageRegsIO extends Bundle {
   val pc = UInt(XLEN.W) // PC
   val inst = UInt(INST_W.W) // 指令
@@ -35,6 +38,9 @@ class IDEXEStageRegsIO extends Bundle {
   val imm = UInt(XLEN.W)
 }
 
+/**
+ * ID -> EXE 阶段的寄存器组的 IO
+ */
 class IDEXEStageRegs extends GeneralStageRegs(new IDEXEStageRegsIO) {
   // **************** print **************** //
   val needBinary =

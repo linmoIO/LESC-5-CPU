@@ -6,6 +6,9 @@ import CPU._
 import CPU.CPUPrintf
 import CPUConfig._
 
+/**
+ * EXE -> MEM 阶段的寄存器组的 IO
+ */
 class EXEMEMStageRegsIO extends Bundle {
   val pc = UInt(XLEN.W) // PC
   val inst = UInt(INST_W.W) // 指令
@@ -28,6 +31,9 @@ class EXEMEMStageRegsIO extends Bundle {
   val imm = UInt(XLEN.W)
 }
 
+/**
+ * EXE -> MEM 阶段的寄存器组
+ */
 class EXEMEMStageRegs extends GeneralStageRegs(new EXEMEMStageRegsIO) {
 
   // **************** print **************** //

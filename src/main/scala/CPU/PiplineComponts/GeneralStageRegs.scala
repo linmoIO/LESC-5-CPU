@@ -3,10 +3,14 @@ package CPU.PiplineComponts
 import chisel3._
 
 /**
-  * 通用 IO 端
-  *
-  * @param dataFlow
-  */
+ * <b>[[通用流水线寄存器组的IO]]</b>
+ * <p>
+ * 根据参数 dataFlow, 封装不同的寄存器组 IO, 满足不同阶段的 IO 需求
+ * <p>
+ * [[input]]
+ * <p>
+ * [[output]]
+ */
 class GeneralStageRegsIO[+T <: Data](dataFlow: T) extends Bundle {
   val stall = Input(Bool()) // 是否暂停 (即保持原本输出)
   val flush = Input(Bool()) // 是否冲刷流水线 (即输出 0.U)
@@ -25,10 +29,14 @@ class GeneralStageRegsIO[+T <: Data](dataFlow: T) extends Bundle {
 // }
 
 /**
-  * 通用寄存器组
-  *
-  * @param dataFlow
-  */
+ * <b>[[通用流水线寄存器组]]</b>
+ * <p>
+ * 用于创建流水线上各个阶段的寄存器组
+ * <p>
+ * [[input]]
+ * <p>
+ * [[output]]
+ */
 class GeneralStageRegs[+T <: Data](dataFlow: T) extends Module {
   val io = IO(new GeneralStageRegsIO[T](dataFlow))
 

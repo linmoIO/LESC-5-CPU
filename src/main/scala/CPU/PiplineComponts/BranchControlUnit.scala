@@ -5,6 +5,15 @@ import chisel3.util._
 import CPU.CPUConfig._
 import CPU._
 
+/**
+ * <b>[[分支跳转控制器]]</b>
+ * <p>
+ * 针对流水线 CPU 设计的组件，用于解决跳转冒险。(无分支预测功能, 单纯进行气泡插入, 控制流水线的暂停和继续)
+ * <p>
+ * [[input]]
+ * <p>
+ * [[output]]
+ */
 class BranchControlUnit extends Module {
   val io = IO(new Bundle {
     /* input */
@@ -47,8 +56,8 @@ class BranchControlUnit extends Module {
         flushReg := false.B // 正常流动
 
         when(io.isJump || io.isBType) { // 检测到分支跳转
-          pcRecordReg := io.idPC
           nextPC := 0.U
+          pcRecordReg := io.idPC
           flushReg := true.B // 插入气泡
           stateReg := sBranch // 进入下一个状态
         }
@@ -56,6 +65,7 @@ class BranchControlUnit extends Module {
 
       is(sBranch) { // 检测到分支跳转, 等待结果
         nextPC := 0.U
+        flushReg := true.B
 
         when(io.exePC === pcRecordReg) { // 检测到可获取结果
           nextPC := io.selectPC
@@ -67,6 +77,7 @@ class BranchControlUnit extends Module {
 
       is(sRes) { // 获取到结果
         nextPC := pcRecordReg
+        flushReg := true.B
 
         when(io.ifPC === pcRecordReg) { // 成功取到正确指令, 退出本次控制
           nextPC := io.ifPC + INST_BYTE.U // PC + 4

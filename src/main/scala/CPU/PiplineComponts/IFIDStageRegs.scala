@@ -6,11 +6,17 @@ import CPU._
 import CPU.CPUPrintf
 import CPUConfig._
 
+/**
+ * IF -> ID 阶段的寄存器组的 IO
+ */
 class IFIDStageRegsIO extends Bundle {
   val pc = UInt(XLEN.W) // PC
   val inst = UInt(INST_W.W) // 指令
 }
 
+/**
+ * IF -> ID 阶段的寄存器组
+ */
 class IFIDStageRegs extends GeneralStageRegs(new IFIDStageRegsIO) {
 
   // **************** print **************** //

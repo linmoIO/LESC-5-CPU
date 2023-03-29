@@ -5,6 +5,15 @@ import chisel3.util._
 import CPU.CPUConfig._
 import CPU._
 
+/**
+ * <b>[[数据写回控制器]]</b>
+ * <p>
+ * 针对流水线 CPU 设计的组件，用于解决数据冒险。(无旁路转发功能, 单纯进行气泡插入, 控制流水线的暂停和继续)
+ * <p>
+ * [[input]]
+ * <p>
+ * [[output]]
+ */
 class DataControlUnit extends Module {
   val io = IO(new Bundle {
     /* input */
@@ -72,6 +81,7 @@ class DataControlUnit extends Module {
   /* 状态机 */
   switch(stateReg) {
     is(sNormal) { // 一般状态下
+      keep := false.B
       stall := false.B
       flush := false.B
 
@@ -95,9 +105,9 @@ class DataControlUnit extends Module {
     }
 
     is(sEXE) { // 源来自于 EXE 的情况下
-      flush := true.B // 冲刷 EXE
       keep := true.B // 使 PC 不动
       stall := true.B // 使 ID 不动
+      flush := true.B // 冲刷 EXE
 
       when(io.memPC === pcRecordReg) { // 当数据源进入到 MEM 阶段
         stateReg := sMEM // 进入对应状态
@@ -105,9 +115,9 @@ class DataControlUnit extends Module {
     }
 
     is(sMEM) { // 源来自于 MEM 的情况下
-      flush := true.B // 冲刷 EXE
       keep := true.B // 使 PC 不动
       stall := true.B // 使 ID 不动
+      flush := true.B // 冲刷 EXE
 
       when(io.wbPC === pcRecordReg) { // 当数据源进入到 WB 阶段
         pcRecordReg := 0.U // 清空 pcRecord
