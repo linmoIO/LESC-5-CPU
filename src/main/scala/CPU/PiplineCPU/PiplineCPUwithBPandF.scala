@@ -10,7 +10,7 @@ import CPU.DebugControl
 import CPU.PiplineComponts._
 
 /**
- * <b>[带旁路转发的流水线 CPU]]</b>
+ * <b>[带旁路转发和分支预测的流水线 CPU]]</b>
  * <p>
  * 流水线 CPU 顶层架构
  * @param instFile
@@ -20,13 +20,13 @@ import CPU.PiplineComponts._
  * @param startAddress
  *  CPU 开始运行的起始指令位置
  */
-class PiplineCPUwithForwarding(
+class PiplineCPUwithBPandF(
     instFile: String = "",
     dataFile: String = "",
     startAddress: Int = 0x0
 ) extends PiplineCPUGeneral(instFile, dataFile, startAddress) {
   /* 创建组件 */
-  val branchControlUnit = Module(new BranchControlUnit())
+  val branchPredictor = Module(new BranchPredictor())
   val dataForwardingUnit = Module(new DataForwardingUnit())
 
   /* 连接 CPU 的输出 */
@@ -85,7 +85,7 @@ class PiplineCPUwithForwarding(
   io.rs2 := regUnit.io.rs2
   io.readDataRs2 := readDataRs2
   io.rd := regUnit.io.rd
-  io.nextPC := branchControlUnit.io.nextPC
+  io.nextPC := branchPredictor.io.nextPC
 
   io.bitType := dataMemory.io.bitType
   io.isUnsigned := dataMemory.io.isUnsigned
@@ -120,12 +120,12 @@ class PiplineCPUwithForwarding(
   val wbRd = wbInst(11, 7)
 
   ifIDStageRegs.io.stall := dataForwardingUnit.io.stall
-  ifIDStageRegs.io.flush := branchControlUnit.io.flush
+  ifIDStageRegs.io.flush := branchPredictor.io.flush
   ifIDStageRegs.io.in.pc := pcReg.io.out
   ifIDStageRegs.io.in.inst := instMemory.io.inst
 
   idEXEStageRegs.io.stall := false.B
-  idEXEStageRegs.io.flush := dataForwardingUnit.io.flush
+  idEXEStageRegs.io.flush := dataForwardingUnit.io.flush | branchPredictor.io.flush
   idEXEStageRegs.io.in.pc := ifIDStageRegs.io.out.pc
   idEXEStageRegs.io.in.inst := ifIDStageRegs.io.out.inst
   idEXEStageRegs.io.in.isJALR := controlUnit.io.isJALR
@@ -177,13 +177,16 @@ class PiplineCPUwithForwarding(
   memWBStageRegs.io.in.aluResult := exeMEMStageRegs.io.out.aluResult
   memWBStageRegs.io.in.imm := exeMEMStageRegs.io.out.imm
 
-  branchControlUnit.io.keep := dataForwardingUnit.io.keep
-  branchControlUnit.io.isJump := controlUnit.io.isJump
-  branchControlUnit.io.isBType := controlUnit.io.isBType
-  branchControlUnit.io.ifPC := ifPC
-  branchControlUnit.io.idPC := idPC
-  branchControlUnit.io.exePC := exePC
-  branchControlUnit.io.selectPC := pcSelectUnit.io.nextPC
+  branchPredictor.io.keep := dataForwardingUnit.io.keep
+  branchPredictor.io.ifMayJump :=
+    (ifInst(6, 5) === 3.U) // opcode 的高 2 位为 11 的是跳转指令
+  branchPredictor.io.ifPC := ifPC
+  branchPredictor.io.idPC := idPC
+  branchPredictor.io.exePC := exePC
+  branchPredictor.io.idInst := idInst
+  branchPredictor.io.exeInst := exeInst
+  branchPredictor.io.selectPC := pcSelectUnit.io.nextPC
+  branchPredictor.io.jump := pcSelectUnit.io.jump
 
   dataForwardingUnit.io.inWriteEnable := memWBStageRegs.io.out.writeEnable
   dataForwardingUnit.io.inRd := wbRd
@@ -214,7 +217,7 @@ class PiplineCPUwithForwarding(
   dataForwardingUnit.io.exePC := exePC
   dataForwardingUnit.io.memPC := memPC
 
-  pcReg.io.in := branchControlUnit.io.nextPC
+  pcReg.io.in := branchPredictor.io.nextPC
 
   instMemory.io.address := pcReg.io.out
 
@@ -263,14 +266,14 @@ class PiplineCPUwithForwarding(
   resSelectUnit.io.pcPlus4 := wbPC + 4.U
 }
 
-object PiplineCPUwithForwarding {
+object PiplineCPUwithBPandF {
   def main(args: Array[String]) = {
-    print(getVerilogString(new PiplineCPUwithForwarding()))
+    print(getVerilogString(new PiplineCPUwithBPandF()))
     emitVerilog(
-      new PiplineCPUwithForwarding(),
+      new PiplineCPUwithBPandF(),
       Array(
         "--target-dir",
-        s"generated/${PiplineCPUwithForwarding.toString().split('$')(0).split('.').last}"
+        s"generated/${PiplineCPUwithBPandF.toString().split('$')(0).split('.').last}"
       )
     )
     print("\n[Success]\n")

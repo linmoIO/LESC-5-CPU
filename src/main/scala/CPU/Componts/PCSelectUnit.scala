@@ -38,17 +38,22 @@ class PCSelectUnit extends Module {
     val aluResult = Input(UInt(XLEN.W))
     /* output */
     val nextPC = Output(UInt(XLEN.W))
+    val jump = Output(Bool()) // 是否真的发生了跳转
   })
 
   val nextPC = WireDefault(io.pcPlus4)
+  val jump = WireDefault(false.B)
 
   when(io.isJALR === true.B) {
     nextPC := io.aluResult
+    jump := true.B
   }.elsewhen(io.isJump || (io.isBType && io.isTrue)) {
     nextPC := io.pcPlusImm
+    jump := true.B
   }
 
   io.nextPC := nextPC
+  io.jump := jump
 
   // **************** print **************** //
   val needBinary = List()

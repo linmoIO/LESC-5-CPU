@@ -20,6 +20,7 @@ import firrtl.FileUtils
 import CPU.PiplineCPU.PiplineCPUGeneral
 import CPU.PiplineCPU.PiplineCPU
 import CPU.PiplineCPU.PiplineCPUwithForwarding
+import CPU.PiplineCPU.PiplineCPUwithBPandF
 
 trait TestFuncPiplineCPU {
 
@@ -274,11 +275,14 @@ class PiplineCPUTester
       var myPrint: Any => Unit = print
       var outFile: PrintWriter = null
 
+      val ifHasBranchPredictor = true // 是否有分支预测
       val ifHasForwarding = true // 是否有旁路转发
 
       if (printToFile) {
         val filePath =
-          if (ifHasForwarding)
+          if (ifHasBranchPredictor)
+            s"${dir}/${fileName}_pipline_BP_F.log"
+          else if (ifHasForwarding)
             s"${dir}/${fileName}_pipline_forwarding.log"
           else
             s"${dir}/${fileName}_pipline.log"
@@ -291,7 +295,12 @@ class PiplineCPUTester
 
       val dataPathFinal = if (needData) dataPath else ""
 
-      if (ifHasForwarding) {
+      if (ifHasBranchPredictor) {
+        test(new PiplineCPUwithBPandF(instPath, dataPathFinal, startAddress)) {
+          dut =>
+            testFn(dut, myPrint)
+        }
+      } else if (ifHasForwarding) {
         test(
           new PiplineCPUwithForwarding(instPath, dataPathFinal, startAddress)
         ) { dut =>

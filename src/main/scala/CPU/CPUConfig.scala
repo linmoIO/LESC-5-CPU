@@ -60,6 +60,12 @@ object CPUConfig {
   // 这是同步读的眼泪
   val NOP_INST = "00000013"
 
+  /* 分支预测的配置 */
+  val PHT_INDEX_W = 12 // PHT 表索引宽度 : 12 位
+  val PHT_SIZE = pow(2, PHT_INDEX_W).toInt // PHT 表大小: 4096 项
+  val BTB_INDEX_W = 6 // BTB 表索引宽度 : 6 位
+  val BTB_SIZE = pow(2, BTB_INDEX_W).toInt // BTB 表大小: 64 项
+
   /* 初始化相关配置 [可修改] */
 
   val IF_RESERVE_STACK_SPACE = true // 是否预先保留栈空间
