@@ -2288,7 +2288,7 @@ end // initial
 `endif
 `endif // SYNTHESIS
 endmodule
-module DataControlUnit(
+module DataForwardingUnit(
   input         clock,
   input         reset,
   input         io_inWriteEnable,
@@ -2303,68 +2303,133 @@ module DataControlUnit(
   input  [4:0]  io_exeRd,
   input         io_memWriteEnable,
   input  [4:0]  io_memRd,
+  input         io_exeIsJump,
+  input         io_exeImmALUToReg,
+  input         io_exeMemRead,
+  input  [63:0] io_exeALUResult,
+  input  [63:0] io_exeImm,
+  input         io_memIsJump,
+  input         io_memImmALUToReg,
+  input         io_memMemRead,
+  input  [63:0] io_memReadData,
+  input  [63:0] io_memALUResult,
+  input  [63:0] io_memImm,
   input  [63:0] io_exePC,
   input  [63:0] io_memPC,
-  input  [63:0] io_wbPC,
   output        io_writeEnable,
   output [4:0]  io_rd,
   output [63:0] io_data,
   output        io_keep,
   output        io_stall,
-  output        io_flush
+  output        io_flush,
+  output        io_forwardRs1,
+  output        io_forwardRs2,
+  output [63:0] io_forwardData1,
+  output [63:0] io_forwardData2
 );
 `ifdef RANDOMIZE_REG_INIT
   reg [31:0] _RAND_0;
   reg [63:0] _RAND_1;
+  reg [31:0] _RAND_2;
+  reg [31:0] _RAND_3;
 `endif // RANDOMIZE_REG_INIT
-  reg [1:0] needAdd_0; // @[DataControlUnit.scala 60:25]
-  reg [63:0] needAdd_1; // @[DataControlUnit.scala 61:28]
-  wire [4:0] useRs1 = ~io_pcRs1ToAlu ? io_rs1 : 5'h0; // @[DataControlUnit.scala 74:{35,44}]
-  wire [4:0] useRs2 = ~io_immRs2ToAlu | io_memWrite ? io_rs2 : 5'h0; // @[DataControlUnit.scala 75:62 76:12]
-  wire [4:0] exeWriteRd = io_exeWriteEnable ? io_exeRd : 5'h0; // @[DataControlUnit.scala 78:{38,51}]
-  wire [4:0] memWriteRd = io_memWriteEnable ? io_memRd : 5'h0; // @[DataControlUnit.scala 79:{38,51}]
-  wire  _T_11 = exeWriteRd != 5'h0 & (useRs1 == exeWriteRd | useRs2 == exeWriteRd); // @[DataControlUnit.scala 89:30]
-  wire  _T_16 = memWriteRd != 5'h0 & (useRs1 == memWriteRd | useRs2 == memWriteRd); // @[DataControlUnit.scala 97:32]
-  wire  _GEN_8 = _T_11 | _T_16; // @[DataControlUnit.scala 90:9 92:14]
-  wire [63:0] _GEN_11 = io_wbPC == needAdd_1 ? 64'h0 : needAdd_1; // @[DataControlUnit.scala 122:37 123:21 61:28]
-  wire  _GEN_12 = io_wbPC == needAdd_1 ? 1'h0 : 1'h1; // @[DataControlUnit.scala 118:12 122:37 124:14]
-  wire [1:0] _GEN_13 = io_wbPC == needAdd_1 ? 2'h0 : needAdd_0; // @[DataControlUnit.scala 122:37 126:18 60:25]
-  wire  _GEN_18 = 2'h1 == needAdd_0 | 2'h2 == needAdd_0 & _GEN_12; // @[DataControlUnit.scala 108:12 82:20]
-  wire  _GEN_19 = 2'h1 == needAdd_0 | 2'h2 == needAdd_0; // @[DataControlUnit.scala 110:13 82:20]
-  assign io_writeEnable = io_inWriteEnable; // @[DataControlUnit.scala 136:18]
-  assign io_rd = io_inRd; // @[DataControlUnit.scala 137:9]
-  assign io_data = io_inData; // @[DataControlUnit.scala 138:11]
-  assign io_keep = 2'h0 == needAdd_0 ? _GEN_8 : _GEN_18; // @[DataControlUnit.scala 82:20]
-  assign io_stall = 2'h0 == needAdd_0 ? _GEN_8 : _GEN_18; // @[DataControlUnit.scala 82:20]
-  assign io_flush = 2'h0 == needAdd_0 ? 1'h0 : _GEN_19; // @[DataControlUnit.scala 82:20 86:13]
+  reg  needAdd_0; // @[DataForwardingUnit.scala 75:25]
+  reg [63:0] needAdd_1; // @[DataForwardingUnit.scala 76:28]
+  reg  ifNeedRs1; // @[DataForwardingUnit.scala 77:26]
+  reg  ifNeedRs2; // @[DataForwardingUnit.scala 78:26]
+  wire [4:0] useRs1 = ~io_pcRs1ToAlu ? io_rs1 : 5'h0; // @[DataForwardingUnit.scala 96:{35,44}]
+  wire [4:0] useRs2 = ~io_immRs2ToAlu | io_memWrite ? io_rs2 : 5'h0; // @[DataForwardingUnit.scala 97:62 98:12]
+  wire [4:0] exeWriteRd = io_exeWriteEnable ? io_exeRd : 5'h0; // @[DataForwardingUnit.scala 100:{38,51}]
+  wire [4:0] memWriteRd = io_memWriteEnable ? io_memRd : 5'h0; // @[DataForwardingUnit.scala 101:{38,51}]
+  wire  _ifRS1EXE_T = exeWriteRd != 5'h0; // @[DataForwardingUnit.scala 104:17]
+  wire  ifRS1EXE = exeWriteRd != 5'h0 & useRs1 == exeWriteRd; // @[DataForwardingUnit.scala 104:26]
+  wire  ifRS2EXE = _ifRS1EXE_T & useRs2 == exeWriteRd; // @[DataForwardingUnit.scala 106:26]
+  wire  _ifRS1MEM_T = memWriteRd != 5'h0; // @[DataForwardingUnit.scala 109:17]
+  wire  ifRS1MEM = memWriteRd != 5'h0 & useRs1 == memWriteRd; // @[DataForwardingUnit.scala 109:26]
+  wire  ifRS2MEM = _ifRS1MEM_T & useRs2 == memWriteRd; // @[DataForwardingUnit.scala 111:26]
+  wire [63:0] _exeResWire_T_1 = io_exePC + 64'h4; // @[DataForwardingUnit.scala 115:28]
+  wire [63:0] _GEN_4 = io_exeImmALUToReg ? io_exeImm : io_exeALUResult; // @[DataForwardingUnit.scala 116:44 117:16]
+  wire [63:0] exeResWire = io_exeIsJump ? _exeResWire_T_1 : _GEN_4; // @[DataForwardingUnit.scala 114:33 115:16]
+  wire [63:0] _memResWire_T_1 = io_memPC + 64'h4; // @[DataForwardingUnit.scala 124:28]
+  wire [63:0] _GEN_6 = io_memImmALUToReg ? io_memImm : io_memALUResult; // @[DataForwardingUnit.scala 125:44 126:16]
+  wire [63:0] _GEN_7 = io_memIsJump ? _memResWire_T_1 : _GEN_6; // @[DataForwardingUnit.scala 123:39 124:16]
+  wire [63:0] memResWire = io_memMemRead ? io_memReadData : _GEN_7; // @[DataForwardingUnit.scala 121:34 122:16]
+  wire [63:0] _GEN_10 = io_exeMemRead ? io_exePC : needAdd_1; // @[DataForwardingUnit.scala 139:40 141:23 76:28]
+  wire  _GEN_11 = io_exeMemRead | needAdd_0; // @[DataForwardingUnit.scala 139:40 144:20 75:25]
+  wire [63:0] _GEN_12 = io_exeMemRead ? 64'h0 : exeResWire; // @[DataForwardingUnit.scala 139:40 147:24]
+  wire  _GEN_13 = io_exeMemRead ? 1'h0 : 1'h1; // @[DataForwardingUnit.scala 139:40 148:22]
+  wire [63:0] _GEN_14 = ifRS1MEM ? memResWire : 64'h0; // @[DataForwardingUnit.scala 151:35 152:24]
+  wire  _GEN_16 = ifRS1EXE & io_exeMemRead; // @[DataForwardingUnit.scala 135:17 138:33]
+  wire [63:0] _GEN_17 = ifRS1EXE ? _GEN_10 : needAdd_1; // @[DataForwardingUnit.scala 138:33 76:28]
+  wire  _GEN_18 = ifRS1EXE ? _GEN_11 : needAdd_0; // @[DataForwardingUnit.scala 138:33 75:25]
+  wire [63:0] _GEN_19 = ifRS1EXE ? _GEN_12 : _GEN_14; // @[DataForwardingUnit.scala 138:33]
+  wire  _GEN_20 = ifRS1EXE ? _GEN_13 : ifRS1MEM; // @[DataForwardingUnit.scala 138:33]
+  wire  _GEN_23 = io_exeMemRead | _GEN_16; // @[DataForwardingUnit.scala 158:40 161:16]
+  wire  _GEN_24 = io_exeMemRead | _GEN_18; // @[DataForwardingUnit.scala 158:40 163:20]
+  wire [63:0] _GEN_27 = ifRS2MEM ? memResWire : 64'h0; // @[DataForwardingUnit.scala 170:35 171:24]
+  wire  _GEN_29 = ifRS2EXE & io_exeMemRead; // @[DataForwardingUnit.scala 136:17 157:33]
+  wire  _GEN_31 = ifRS2EXE ? _GEN_23 : _GEN_16; // @[DataForwardingUnit.scala 157:33]
+  wire [63:0] _GEN_33 = ifRS2EXE ? _GEN_12 : _GEN_27; // @[DataForwardingUnit.scala 157:33]
+  wire  _GEN_34 = ifRS2EXE ? _GEN_13 : ifRS2MEM; // @[DataForwardingUnit.scala 157:33]
+  wire [63:0] _GEN_35 = ifNeedRs1 ? memResWire : 64'h0; // @[DataForwardingUnit.scala 183:36 184:24]
+  wire [63:0] _GEN_37 = ifNeedRs2 ? memResWire : 64'h0; // @[DataForwardingUnit.scala 187:36 188:24]
+  wire [63:0] _GEN_39 = io_memPC == needAdd_1 ? _GEN_35 : 64'h0; // @[DataForwardingUnit.scala 182:38]
+  wire  _GEN_40 = io_memPC == needAdd_1 & ifNeedRs1; // @[DataForwardingUnit.scala 182:38]
+  wire [63:0] _GEN_41 = io_memPC == needAdd_1 ? _GEN_37 : 64'h0; // @[DataForwardingUnit.scala 182:38]
+  wire  _GEN_42 = io_memPC == needAdd_1 & ifNeedRs2; // @[DataForwardingUnit.scala 182:38]
+  wire  _GEN_44 = io_memPC == needAdd_1 ? 1'h0 : 1'h1; // @[DataForwardingUnit.scala 178:12 182:38 193:14]
+  wire [63:0] _GEN_48 = needAdd_0 ? _GEN_39 : 64'h0; // @[DataForwardingUnit.scala 130:20]
+  wire [63:0] _GEN_50 = needAdd_0 ? _GEN_41 : 64'h0; // @[DataForwardingUnit.scala 130:20]
+  assign io_writeEnable = io_inWriteEnable; // @[DataForwardingUnit.scala 210:18]
+  assign io_rd = io_inRd; // @[DataForwardingUnit.scala 211:9]
+  assign io_data = io_inData; // @[DataForwardingUnit.scala 212:11]
+  assign io_keep = ~needAdd_0 ? _GEN_31 : needAdd_0 & _GEN_44; // @[DataForwardingUnit.scala 130:20]
+  assign io_stall = ~needAdd_0 ? _GEN_31 : needAdd_0 & _GEN_44; // @[DataForwardingUnit.scala 130:20]
+  assign io_flush = ~needAdd_0 ? 1'h0 : needAdd_0; // @[DataForwardingUnit.scala 130:20 134:13]
+  assign io_forwardRs1 = ~needAdd_0 ? _GEN_20 : needAdd_0 & _GEN_40; // @[DataForwardingUnit.scala 130:20]
+  assign io_forwardRs2 = ~needAdd_0 ? _GEN_34 : needAdd_0 & _GEN_42; // @[DataForwardingUnit.scala 130:20]
+  assign io_forwardData1 = ~needAdd_0 ? _GEN_19 : _GEN_48; // @[DataForwardingUnit.scala 130:20]
+  assign io_forwardData2 = ~needAdd_0 ? _GEN_33 : _GEN_50; // @[DataForwardingUnit.scala 130:20]
   always @(posedge clock) begin
-    if (reset) begin // @[DataControlUnit.scala 60:25]
-      needAdd_0 <= 2'h0; // @[DataControlUnit.scala 60:25]
-    end else if (2'h0 == needAdd_0) begin // @[DataControlUnit.scala 82:20]
-      if (_T_11) begin // @[DataControlUnit.scala 90:9]
-        needAdd_0 <= 2'h1; // @[DataControlUnit.scala 94:18]
-      end else if (_T_16) begin // @[DataControlUnit.scala 98:11]
-        needAdd_0 <= 2'h2; // @[DataControlUnit.scala 102:20]
+    if (reset) begin // @[DataForwardingUnit.scala 75:25]
+      needAdd_0 <= 1'h0; // @[DataForwardingUnit.scala 75:25]
+    end else if (~needAdd_0) begin // @[DataForwardingUnit.scala 130:20]
+      if (ifRS2EXE) begin // @[DataForwardingUnit.scala 157:33]
+        needAdd_0 <= _GEN_24;
+      end else if (ifRS1EXE) begin // @[DataForwardingUnit.scala 138:33]
+        needAdd_0 <= _GEN_11;
       end
-    end else if (2'h1 == needAdd_0) begin // @[DataControlUnit.scala 82:20]
-      if (io_memPC == needAdd_1) begin // @[DataControlUnit.scala 112:38]
-        needAdd_0 <= 2'h2; // @[DataControlUnit.scala 113:18]
+    end else if (needAdd_0) begin // @[DataForwardingUnit.scala 130:20]
+      if (io_memPC == needAdd_1) begin // @[DataForwardingUnit.scala 182:38]
+        needAdd_0 <= 1'h0; // @[DataForwardingUnit.scala 195:18]
       end
-    end else if (2'h2 == needAdd_0) begin // @[DataControlUnit.scala 82:20]
-      needAdd_0 <= _GEN_13;
     end
-    if (reset) begin // @[DataControlUnit.scala 61:28]
-      needAdd_1 <= 64'h0; // @[DataControlUnit.scala 61:28]
-    end else if (2'h0 == needAdd_0) begin // @[DataControlUnit.scala 82:20]
-      if (_T_11) begin // @[DataControlUnit.scala 90:9]
-        needAdd_1 <= io_exePC; // @[DataControlUnit.scala 91:21]
-      end else if (_T_16) begin // @[DataControlUnit.scala 98:11]
-        needAdd_1 <= io_memPC; // @[DataControlUnit.scala 99:23]
+    if (reset) begin // @[DataForwardingUnit.scala 76:28]
+      needAdd_1 <= 64'h0; // @[DataForwardingUnit.scala 76:28]
+    end else if (~needAdd_0) begin // @[DataForwardingUnit.scala 130:20]
+      if (ifRS2EXE) begin // @[DataForwardingUnit.scala 157:33]
+        if (io_exeMemRead) begin // @[DataForwardingUnit.scala 158:40]
+          needAdd_1 <= io_exePC; // @[DataForwardingUnit.scala 160:23]
+        end else begin
+          needAdd_1 <= _GEN_17;
+        end
+      end else begin
+        needAdd_1 <= _GEN_17;
       end
-    end else if (!(2'h1 == needAdd_0)) begin // @[DataControlUnit.scala 82:20]
-      if (2'h2 == needAdd_0) begin // @[DataControlUnit.scala 82:20]
-        needAdd_1 <= _GEN_11;
+    end else if (needAdd_0) begin // @[DataForwardingUnit.scala 130:20]
+      if (io_memPC == needAdd_1) begin // @[DataForwardingUnit.scala 182:38]
+        needAdd_1 <= 64'h0; // @[DataForwardingUnit.scala 192:21]
       end
+    end
+    if (reset) begin // @[DataForwardingUnit.scala 77:26]
+      ifNeedRs1 <= 1'h0; // @[DataForwardingUnit.scala 77:26]
+    end else if (~needAdd_0) begin // @[DataForwardingUnit.scala 130:20]
+      ifNeedRs1 <= _GEN_16;
+    end
+    if (reset) begin // @[DataForwardingUnit.scala 78:26]
+      ifNeedRs2 <= 1'h0; // @[DataForwardingUnit.scala 78:26]
+    end else if (~needAdd_0) begin // @[DataForwardingUnit.scala 130:20]
+      ifNeedRs2 <= _GEN_29;
     end
   end
 // Register and memory initialization
@@ -2404,9 +2469,13 @@ initial begin
     `endif
 `ifdef RANDOMIZE_REG_INIT
   _RAND_0 = {1{`RANDOM}};
-  needAdd_0 = _RAND_0[1:0];
+  needAdd_0 = _RAND_0[0:0];
   _RAND_1 = {2{`RANDOM}};
   needAdd_1 = _RAND_1[63:0];
+  _RAND_2 = {1{`RANDOM}};
+  ifNeedRs1 = _RAND_2[0:0];
+  _RAND_3 = {1{`RANDOM}};
+  ifNeedRs2 = _RAND_3[0:0];
 `endif // RANDOMIZE_REG_INIT
   `endif // RANDOMIZE
 end // initial
@@ -2415,7 +2484,7 @@ end // initial
 `endif
 `endif // SYNTHESIS
 endmodule
-module PiplineCPU(
+module PiplineCPUwithForwarding(
   input         clock,
   input         reset,
   output        io_isValidInst,
@@ -2676,40 +2745,58 @@ module PiplineCPU(
   wire [63:0] memWBStageRegs_io_out_readData; // @[PiplineCPUGeneral.scala 103:30]
   wire [63:0] memWBStageRegs_io_out_aluResult; // @[PiplineCPUGeneral.scala 103:30]
   wire [63:0] memWBStageRegs_io_out_imm; // @[PiplineCPUGeneral.scala 103:30]
-  wire  branchControlUnit_clock; // @[PiplineCPU.scala 30:33]
-  wire  branchControlUnit_reset; // @[PiplineCPU.scala 30:33]
-  wire  branchControlUnit_io_keep; // @[PiplineCPU.scala 30:33]
-  wire  branchControlUnit_io_isJump; // @[PiplineCPU.scala 30:33]
-  wire  branchControlUnit_io_isBType; // @[PiplineCPU.scala 30:33]
-  wire [63:0] branchControlUnit_io_ifPC; // @[PiplineCPU.scala 30:33]
-  wire [63:0] branchControlUnit_io_idPC; // @[PiplineCPU.scala 30:33]
-  wire [63:0] branchControlUnit_io_exePC; // @[PiplineCPU.scala 30:33]
-  wire [63:0] branchControlUnit_io_selectPC; // @[PiplineCPU.scala 30:33]
-  wire [63:0] branchControlUnit_io_nextPC; // @[PiplineCPU.scala 30:33]
-  wire  branchControlUnit_io_flush; // @[PiplineCPU.scala 30:33]
-  wire  dataControlUnit_clock; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_reset; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_io_inWriteEnable; // @[PiplineCPU.scala 31:31]
-  wire [4:0] dataControlUnit_io_inRd; // @[PiplineCPU.scala 31:31]
-  wire [63:0] dataControlUnit_io_inData; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_io_pcRs1ToAlu; // @[PiplineCPU.scala 31:31]
-  wire [4:0] dataControlUnit_io_rs1; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_io_memWrite; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_io_immRs2ToAlu; // @[PiplineCPU.scala 31:31]
-  wire [4:0] dataControlUnit_io_rs2; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_io_exeWriteEnable; // @[PiplineCPU.scala 31:31]
-  wire [4:0] dataControlUnit_io_exeRd; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_io_memWriteEnable; // @[PiplineCPU.scala 31:31]
-  wire [4:0] dataControlUnit_io_memRd; // @[PiplineCPU.scala 31:31]
-  wire [63:0] dataControlUnit_io_exePC; // @[PiplineCPU.scala 31:31]
-  wire [63:0] dataControlUnit_io_memPC; // @[PiplineCPU.scala 31:31]
-  wire [63:0] dataControlUnit_io_wbPC; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_io_writeEnable; // @[PiplineCPU.scala 31:31]
-  wire [4:0] dataControlUnit_io_rd; // @[PiplineCPU.scala 31:31]
-  wire [63:0] dataControlUnit_io_data; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_io_keep; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_io_stall; // @[PiplineCPU.scala 31:31]
-  wire  dataControlUnit_io_flush; // @[PiplineCPU.scala 31:31]
+  wire  branchControlUnit_clock; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire  branchControlUnit_reset; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire  branchControlUnit_io_keep; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire  branchControlUnit_io_isJump; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire  branchControlUnit_io_isBType; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire [63:0] branchControlUnit_io_ifPC; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire [63:0] branchControlUnit_io_idPC; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire [63:0] branchControlUnit_io_exePC; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire [63:0] branchControlUnit_io_selectPC; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire [63:0] branchControlUnit_io_nextPC; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire  branchControlUnit_io_flush; // @[PiplineCPUwithForwarding.scala 30:33]
+  wire  dataForwardingUnit_clock; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_reset; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_inWriteEnable; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [4:0] dataForwardingUnit_io_inRd; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_inData; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_pcRs1ToAlu; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [4:0] dataForwardingUnit_io_rs1; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_memWrite; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_immRs2ToAlu; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [4:0] dataForwardingUnit_io_rs2; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_exeWriteEnable; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [4:0] dataForwardingUnit_io_exeRd; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_memWriteEnable; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [4:0] dataForwardingUnit_io_memRd; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_exeIsJump; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_exeImmALUToReg; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_exeMemRead; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_exeALUResult; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_exeImm; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_memIsJump; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_memImmALUToReg; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_memMemRead; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_memReadData; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_memALUResult; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_memImm; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_exePC; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_memPC; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_writeEnable; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [4:0] dataForwardingUnit_io_rd; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_data; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_keep; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_stall; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_flush; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_forwardRs1; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire  dataForwardingUnit_io_forwardRs2; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_forwardData1; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] dataForwardingUnit_io_forwardData2; // @[PiplineCPUwithForwarding.scala 31:34]
+  wire [63:0] readDataRs1 = dataForwardingUnit_io_forwardRs1 ? dataForwardingUnit_io_forwardData1 :
+    regUnit_io_readDataRs1; // @[PiplineCPUwithForwarding.scala 35:24]
+  wire [63:0] readDataRs2 = dataForwardingUnit_io_forwardRs2 ? dataForwardingUnit_io_forwardData2 :
+    regUnit_io_readDataRs2; // @[PiplineCPUwithForwarding.scala 40:24]
   PCReg pcReg ( // @[PiplineCPUGeneral.scala 89:21]
     .clock(pcReg_clock),
     .reset(pcReg_reset),
@@ -2921,7 +3008,7 @@ module PiplineCPU(
     .io_out_aluResult(memWBStageRegs_io_out_aluResult),
     .io_out_imm(memWBStageRegs_io_out_imm)
   );
-  BranchControlUnit branchControlUnit ( // @[PiplineCPU.scala 30:33]
+  BranchControlUnit branchControlUnit ( // @[PiplineCPUwithForwarding.scala 30:33]
     .clock(branchControlUnit_clock),
     .reset(branchControlUnit_reset),
     .io_keep(branchControlUnit_io_keep),
@@ -2934,221 +3021,248 @@ module PiplineCPU(
     .io_nextPC(branchControlUnit_io_nextPC),
     .io_flush(branchControlUnit_io_flush)
   );
-  DataControlUnit dataControlUnit ( // @[PiplineCPU.scala 31:31]
-    .clock(dataControlUnit_clock),
-    .reset(dataControlUnit_reset),
-    .io_inWriteEnable(dataControlUnit_io_inWriteEnable),
-    .io_inRd(dataControlUnit_io_inRd),
-    .io_inData(dataControlUnit_io_inData),
-    .io_pcRs1ToAlu(dataControlUnit_io_pcRs1ToAlu),
-    .io_rs1(dataControlUnit_io_rs1),
-    .io_memWrite(dataControlUnit_io_memWrite),
-    .io_immRs2ToAlu(dataControlUnit_io_immRs2ToAlu),
-    .io_rs2(dataControlUnit_io_rs2),
-    .io_exeWriteEnable(dataControlUnit_io_exeWriteEnable),
-    .io_exeRd(dataControlUnit_io_exeRd),
-    .io_memWriteEnable(dataControlUnit_io_memWriteEnable),
-    .io_memRd(dataControlUnit_io_memRd),
-    .io_exePC(dataControlUnit_io_exePC),
-    .io_memPC(dataControlUnit_io_memPC),
-    .io_wbPC(dataControlUnit_io_wbPC),
-    .io_writeEnable(dataControlUnit_io_writeEnable),
-    .io_rd(dataControlUnit_io_rd),
-    .io_data(dataControlUnit_io_data),
-    .io_keep(dataControlUnit_io_keep),
-    .io_stall(dataControlUnit_io_stall),
-    .io_flush(dataControlUnit_io_flush)
+  DataForwardingUnit dataForwardingUnit ( // @[PiplineCPUwithForwarding.scala 31:34]
+    .clock(dataForwardingUnit_clock),
+    .reset(dataForwardingUnit_reset),
+    .io_inWriteEnable(dataForwardingUnit_io_inWriteEnable),
+    .io_inRd(dataForwardingUnit_io_inRd),
+    .io_inData(dataForwardingUnit_io_inData),
+    .io_pcRs1ToAlu(dataForwardingUnit_io_pcRs1ToAlu),
+    .io_rs1(dataForwardingUnit_io_rs1),
+    .io_memWrite(dataForwardingUnit_io_memWrite),
+    .io_immRs2ToAlu(dataForwardingUnit_io_immRs2ToAlu),
+    .io_rs2(dataForwardingUnit_io_rs2),
+    .io_exeWriteEnable(dataForwardingUnit_io_exeWriteEnable),
+    .io_exeRd(dataForwardingUnit_io_exeRd),
+    .io_memWriteEnable(dataForwardingUnit_io_memWriteEnable),
+    .io_memRd(dataForwardingUnit_io_memRd),
+    .io_exeIsJump(dataForwardingUnit_io_exeIsJump),
+    .io_exeImmALUToReg(dataForwardingUnit_io_exeImmALUToReg),
+    .io_exeMemRead(dataForwardingUnit_io_exeMemRead),
+    .io_exeALUResult(dataForwardingUnit_io_exeALUResult),
+    .io_exeImm(dataForwardingUnit_io_exeImm),
+    .io_memIsJump(dataForwardingUnit_io_memIsJump),
+    .io_memImmALUToReg(dataForwardingUnit_io_memImmALUToReg),
+    .io_memMemRead(dataForwardingUnit_io_memMemRead),
+    .io_memReadData(dataForwardingUnit_io_memReadData),
+    .io_memALUResult(dataForwardingUnit_io_memALUResult),
+    .io_memImm(dataForwardingUnit_io_memImm),
+    .io_exePC(dataForwardingUnit_io_exePC),
+    .io_memPC(dataForwardingUnit_io_memPC),
+    .io_writeEnable(dataForwardingUnit_io_writeEnable),
+    .io_rd(dataForwardingUnit_io_rd),
+    .io_data(dataForwardingUnit_io_data),
+    .io_keep(dataForwardingUnit_io_keep),
+    .io_stall(dataForwardingUnit_io_stall),
+    .io_flush(dataForwardingUnit_io_flush),
+    .io_forwardRs1(dataForwardingUnit_io_forwardRs1),
+    .io_forwardRs2(dataForwardingUnit_io_forwardRs2),
+    .io_forwardData1(dataForwardingUnit_io_forwardData1),
+    .io_forwardData2(dataForwardingUnit_io_forwardData2)
   );
-  assign io_isValidInst = controlUnit_io_isValidInst; // @[PiplineCPU.scala 35:18]
-  assign io_ifPC = ifIDStageRegs_io_in_pc; // @[PiplineCPU.scala 37:11]
-  assign io_ifInst = ifIDStageRegs_io_in_inst; // @[PiplineCPU.scala 38:13]
-  assign io_idPC = idEXEStageRegs_io_in_pc; // @[PiplineCPU.scala 39:11]
-  assign io_idInst = idEXEStageRegs_io_in_inst; // @[PiplineCPU.scala 40:13]
-  assign io_exePC = exeMEMStageRegs_io_in_pc; // @[PiplineCPU.scala 41:12]
-  assign io_exeInst = exeMEMStageRegs_io_in_inst; // @[PiplineCPU.scala 42:14]
-  assign io_memPC = memWBStageRegs_io_in_pc; // @[PiplineCPU.scala 43:12]
-  assign io_memInst = memWBStageRegs_io_in_inst; // @[PiplineCPU.scala 44:14]
-  assign io_wbPC = memWBStageRegs_io_out_pc; // @[PiplineCPU.scala 45:11]
-  assign io_wbInst = memWBStageRegs_io_out_inst; // @[PiplineCPU.scala 46:13]
-  assign io_nextPC = branchControlUnit_io_nextPC; // @[PiplineCPU.scala 79:13]
-  assign io_aluOperation = alu_io_aluOperation; // @[PiplineCPU.scala 72:19]
-  assign io_imm = inst2ImmUnit_io_imm; // @[PiplineCPU.scala 73:10]
-  assign io_aluResult = alu_io_result; // @[PiplineCPU.scala 50:16]
-  assign io_opcode = controlUnit_io_opcode; // @[PiplineCPU.scala 53:13]
-  assign io_isTrue = pcSelectUnit_io_isTrue; // @[PiplineCPU.scala 52:13]
-  assign io_isJALR = pcSelectUnit_io_isJALR; // @[PiplineCPU.scala 54:13]
-  assign io_isBType = pcSelectUnit_io_isBType; // @[PiplineCPU.scala 55:14]
-  assign io_isJump = pcSelectUnit_io_isJump; // @[PiplineCPU.scala 56:13]
-  assign io_immALUToReg = controlUnit_io_immALUToReg; // @[PiplineCPU.scala 57:18]
-  assign io_memRead = dataMemory_io_memRead; // @[PiplineCPU.scala 58:14]
-  assign io_memWrite = dataMemory_io_memWrite; // @[PiplineCPU.scala 59:15]
-  assign io_immRs2ToALU = controlUnit_io_immRs2ToALU; // @[PiplineCPU.scala 60:18]
-  assign io_aluY = alu_io_y; // @[PiplineCPU.scala 61:11]
-  assign io_pcRs1ToALU = controlUnit_io_pcRs1ToALU; // @[PiplineCPU.scala 62:17]
-  assign io_aluX = alu_io_x; // @[PiplineCPU.scala 63:11]
-  assign io_isIType = controlUnit_io_isIType; // @[PiplineCPU.scala 64:14]
-  assign io_isRType = controlUnit_io_isRType; // @[PiplineCPU.scala 65:14]
-  assign io_isWord = controlUnit_io_isWord; // @[PiplineCPU.scala 66:13]
-  assign io_ifWriteToReg = regUnit_io_writeEnable; // @[PiplineCPU.scala 67:19]
-  assign io_address = dataMemory_io_address; // @[PiplineCPU.scala 69:14]
-  assign io_writeData = dataMemory_io_writeData; // @[PiplineCPU.scala 70:16]
-  assign io_rs1 = regUnit_io_rs1; // @[PiplineCPU.scala 74:10]
-  assign io_readDataRs1 = regUnit_io_readDataRs1; // @[PiplineCPU.scala 75:18]
-  assign io_rs2 = regUnit_io_rs2; // @[PiplineCPU.scala 76:10]
-  assign io_readDataRs2 = regUnit_io_readDataRs2; // @[PiplineCPU.scala 77:18]
-  assign io_rd = regUnit_io_rd; // @[PiplineCPU.scala 78:9]
-  assign io_resultToReg = regUnit_io_writeData; // @[PiplineCPU.scala 48:18]
-  assign io_bitType = dataMemory_io_bitType; // @[PiplineCPU.scala 81:14]
-  assign io_isUnsigned = dataMemory_io_isUnsigned; // @[PiplineCPU.scala 82:17]
-  assign io_readData = dataMemory_io_readData; // @[PiplineCPU.scala 49:15]
-  assign io_regAll_0 = 64'h0; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_1 = regUnit_io_regAll_1; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_2 = regUnit_io_regAll_2; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_3 = regUnit_io_regAll_3; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_4 = regUnit_io_regAll_4; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_5 = regUnit_io_regAll_5; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_6 = regUnit_io_regAll_6; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_7 = regUnit_io_regAll_7; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_8 = regUnit_io_regAll_8; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_9 = regUnit_io_regAll_9; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_10 = regUnit_io_regAll_10; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_11 = regUnit_io_regAll_11; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_12 = regUnit_io_regAll_12; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_13 = regUnit_io_regAll_13; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_14 = regUnit_io_regAll_14; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_15 = regUnit_io_regAll_15; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_16 = regUnit_io_regAll_16; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_17 = regUnit_io_regAll_17; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_18 = regUnit_io_regAll_18; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_19 = regUnit_io_regAll_19; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_20 = regUnit_io_regAll_20; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_21 = regUnit_io_regAll_21; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_22 = regUnit_io_regAll_22; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_23 = regUnit_io_regAll_23; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_24 = regUnit_io_regAll_24; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_25 = regUnit_io_regAll_25; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_26 = regUnit_io_regAll_26; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_27 = regUnit_io_regAll_27; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_28 = regUnit_io_regAll_28; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_29 = regUnit_io_regAll_29; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_30 = regUnit_io_regAll_30; // @[PiplineCPU.scala 85:18]
-  assign io_regAll_31 = regUnit_io_regAll_31; // @[PiplineCPU.scala 85:18]
+  assign io_isValidInst = controlUnit_io_isValidInst; // @[PiplineCPUwithForwarding.scala 46:18]
+  assign io_ifPC = ifIDStageRegs_io_in_pc; // @[PiplineCPUwithForwarding.scala 48:11]
+  assign io_ifInst = ifIDStageRegs_io_in_inst; // @[PiplineCPUwithForwarding.scala 49:13]
+  assign io_idPC = idEXEStageRegs_io_in_pc; // @[PiplineCPUwithForwarding.scala 50:11]
+  assign io_idInst = idEXEStageRegs_io_in_inst; // @[PiplineCPUwithForwarding.scala 51:13]
+  assign io_exePC = exeMEMStageRegs_io_in_pc; // @[PiplineCPUwithForwarding.scala 52:12]
+  assign io_exeInst = exeMEMStageRegs_io_in_inst; // @[PiplineCPUwithForwarding.scala 53:14]
+  assign io_memPC = memWBStageRegs_io_in_pc; // @[PiplineCPUwithForwarding.scala 54:12]
+  assign io_memInst = memWBStageRegs_io_in_inst; // @[PiplineCPUwithForwarding.scala 55:14]
+  assign io_wbPC = memWBStageRegs_io_out_pc; // @[PiplineCPUwithForwarding.scala 56:11]
+  assign io_wbInst = memWBStageRegs_io_out_inst; // @[PiplineCPUwithForwarding.scala 57:13]
+  assign io_nextPC = branchControlUnit_io_nextPC; // @[PiplineCPUwithForwarding.scala 90:13]
+  assign io_aluOperation = alu_io_aluOperation; // @[PiplineCPUwithForwarding.scala 83:19]
+  assign io_imm = inst2ImmUnit_io_imm; // @[PiplineCPUwithForwarding.scala 84:10]
+  assign io_aluResult = alu_io_result; // @[PiplineCPUwithForwarding.scala 61:16]
+  assign io_opcode = controlUnit_io_opcode; // @[PiplineCPUwithForwarding.scala 64:13]
+  assign io_isTrue = pcSelectUnit_io_isTrue; // @[PiplineCPUwithForwarding.scala 63:13]
+  assign io_isJALR = pcSelectUnit_io_isJALR; // @[PiplineCPUwithForwarding.scala 65:13]
+  assign io_isBType = pcSelectUnit_io_isBType; // @[PiplineCPUwithForwarding.scala 66:14]
+  assign io_isJump = pcSelectUnit_io_isJump; // @[PiplineCPUwithForwarding.scala 67:13]
+  assign io_immALUToReg = controlUnit_io_immALUToReg; // @[PiplineCPUwithForwarding.scala 68:18]
+  assign io_memRead = dataMemory_io_memRead; // @[PiplineCPUwithForwarding.scala 69:14]
+  assign io_memWrite = dataMemory_io_memWrite; // @[PiplineCPUwithForwarding.scala 70:15]
+  assign io_immRs2ToALU = controlUnit_io_immRs2ToALU; // @[PiplineCPUwithForwarding.scala 71:18]
+  assign io_aluY = alu_io_y; // @[PiplineCPUwithForwarding.scala 72:11]
+  assign io_pcRs1ToALU = controlUnit_io_pcRs1ToALU; // @[PiplineCPUwithForwarding.scala 73:17]
+  assign io_aluX = alu_io_x; // @[PiplineCPUwithForwarding.scala 74:11]
+  assign io_isIType = controlUnit_io_isIType; // @[PiplineCPUwithForwarding.scala 75:14]
+  assign io_isRType = controlUnit_io_isRType; // @[PiplineCPUwithForwarding.scala 76:14]
+  assign io_isWord = controlUnit_io_isWord; // @[PiplineCPUwithForwarding.scala 77:13]
+  assign io_ifWriteToReg = regUnit_io_writeEnable; // @[PiplineCPUwithForwarding.scala 78:19]
+  assign io_address = dataMemory_io_address; // @[PiplineCPUwithForwarding.scala 80:14]
+  assign io_writeData = dataMemory_io_writeData; // @[PiplineCPUwithForwarding.scala 81:16]
+  assign io_rs1 = regUnit_io_rs1; // @[PiplineCPUwithForwarding.scala 85:10]
+  assign io_readDataRs1 = dataForwardingUnit_io_forwardRs1 ? dataForwardingUnit_io_forwardData1 : regUnit_io_readDataRs1
+    ; // @[PiplineCPUwithForwarding.scala 35:24]
+  assign io_rs2 = regUnit_io_rs2; // @[PiplineCPUwithForwarding.scala 87:10]
+  assign io_readDataRs2 = dataForwardingUnit_io_forwardRs2 ? dataForwardingUnit_io_forwardData2 : regUnit_io_readDataRs2
+    ; // @[PiplineCPUwithForwarding.scala 40:24]
+  assign io_rd = regUnit_io_rd; // @[PiplineCPUwithForwarding.scala 89:9]
+  assign io_resultToReg = regUnit_io_writeData; // @[PiplineCPUwithForwarding.scala 59:18]
+  assign io_bitType = dataMemory_io_bitType; // @[PiplineCPUwithForwarding.scala 92:14]
+  assign io_isUnsigned = dataMemory_io_isUnsigned; // @[PiplineCPUwithForwarding.scala 93:17]
+  assign io_readData = dataMemory_io_readData; // @[PiplineCPUwithForwarding.scala 60:15]
+  assign io_regAll_0 = 64'h0; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_1 = regUnit_io_regAll_1; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_2 = regUnit_io_regAll_2; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_3 = regUnit_io_regAll_3; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_4 = regUnit_io_regAll_4; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_5 = regUnit_io_regAll_5; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_6 = regUnit_io_regAll_6; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_7 = regUnit_io_regAll_7; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_8 = regUnit_io_regAll_8; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_9 = regUnit_io_regAll_9; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_10 = regUnit_io_regAll_10; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_11 = regUnit_io_regAll_11; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_12 = regUnit_io_regAll_12; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_13 = regUnit_io_regAll_13; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_14 = regUnit_io_regAll_14; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_15 = regUnit_io_regAll_15; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_16 = regUnit_io_regAll_16; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_17 = regUnit_io_regAll_17; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_18 = regUnit_io_regAll_18; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_19 = regUnit_io_regAll_19; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_20 = regUnit_io_regAll_20; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_21 = regUnit_io_regAll_21; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_22 = regUnit_io_regAll_22; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_23 = regUnit_io_regAll_23; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_24 = regUnit_io_regAll_24; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_25 = regUnit_io_regAll_25; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_26 = regUnit_io_regAll_26; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_27 = regUnit_io_regAll_27; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_28 = regUnit_io_regAll_28; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_29 = regUnit_io_regAll_29; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_30 = regUnit_io_regAll_30; // @[PiplineCPUwithForwarding.scala 96:18]
+  assign io_regAll_31 = regUnit_io_regAll_31; // @[PiplineCPUwithForwarding.scala 96:18]
   assign pcReg_clock = clock;
   assign pcReg_reset = reset;
-  assign pcReg_io_in = branchControlUnit_io_nextPC; // @[PiplineCPU.scala 195:15]
+  assign pcReg_io_in = branchControlUnit_io_nextPC; // @[PiplineCPUwithForwarding.scala 219:15]
   assign instMemory_clock = clock;
-  assign instMemory_io_address = pcReg_io_out; // @[PiplineCPU.scala 197:25]
-  assign controlUnit_io_opcode = ifIDStageRegs_io_out_inst[6:0]; // @[PiplineCPU.scala 100:22]
-  assign inst2ImmUnit_io_inst = ifIDStageRegs_io_out_inst; // @[PiplineCPU.scala 214:24]
+  assign instMemory_io_address = pcReg_io_out; // @[PiplineCPUwithForwarding.scala 221:25]
+  assign controlUnit_io_opcode = ifIDStageRegs_io_out_inst[6:0]; // @[PiplineCPUwithForwarding.scala 111:22]
+  assign inst2ImmUnit_io_inst = ifIDStageRegs_io_out_inst; // @[PiplineCPUwithForwarding.scala 238:24]
   assign regUnit_clock = clock;
   assign regUnit_reset = reset;
-  assign regUnit_io_rs1 = ifIDStageRegs_io_out_inst[19:15]; // @[PiplineCPU.scala 102:19]
-  assign regUnit_io_rs2 = ifIDStageRegs_io_out_inst[24:20]; // @[PiplineCPU.scala 103:19]
-  assign regUnit_io_rd = dataControlUnit_io_rd; // @[PiplineCPU.scala 211:17]
-  assign regUnit_io_writeEnable = dataControlUnit_io_writeEnable; // @[PiplineCPU.scala 208:26]
-  assign regUnit_io_writeData = dataControlUnit_io_data; // @[PiplineCPU.scala 212:24]
-  assign aluControlUnit_io_isBType = controlUnit_io_isBType; // @[PiplineCPU.scala 201:29]
-  assign aluControlUnit_io_isIType = controlUnit_io_isIType; // @[PiplineCPU.scala 202:29]
-  assign aluControlUnit_io_isRType = controlUnit_io_isRType; // @[PiplineCPU.scala 203:29]
-  assign aluControlUnit_io_isWord = controlUnit_io_isWord; // @[PiplineCPU.scala 204:28]
-  assign aluControlUnit_io_funct3 = ifIDStageRegs_io_out_inst[14:12]; // @[PiplineCPU.scala 105:22]
-  assign aluControlUnit_io_funct7 = ifIDStageRegs_io_out_inst[31:25]; // @[PiplineCPU.scala 106:22]
-  assign pcSelectUnit_io_pcPlus4 = idEXEStageRegs_io_out_pc + 64'h4; // @[PiplineCPU.scala 216:36]
-  assign pcSelectUnit_io_pcPlusImm = idEXEStageRegs_io_out_pc + idEXEStageRegs_io_out_imm; // @[PiplineCPU.scala 217:38]
-  assign pcSelectUnit_io_isJALR = idEXEStageRegs_io_out_isJALR; // @[PiplineCPU.scala 218:26]
-  assign pcSelectUnit_io_isBType = idEXEStageRegs_io_out_isBType; // @[PiplineCPU.scala 219:27]
-  assign pcSelectUnit_io_isJump = idEXEStageRegs_io_out_isJump; // @[PiplineCPU.scala 220:26]
-  assign pcSelectUnit_io_isTrue = alu_io_result[0]; // @[PiplineCPU.scala 221:42]
-  assign pcSelectUnit_io_aluResult = alu_io_result; // @[PiplineCPU.scala 222:29]
-  assign alu_io_aluOperation = idEXEStageRegs_io_out_aluOperation; // @[PiplineCPU.scala 224:23]
-  assign alu_io_x = idEXEStageRegs_io_out_aluX; // @[PiplineCPU.scala 225:12]
-  assign alu_io_y = idEXEStageRegs_io_out_aluY; // @[PiplineCPU.scala 226:12]
+  assign regUnit_io_rs1 = ifIDStageRegs_io_out_inst[19:15]; // @[PiplineCPUwithForwarding.scala 113:19]
+  assign regUnit_io_rs2 = ifIDStageRegs_io_out_inst[24:20]; // @[PiplineCPUwithForwarding.scala 114:19]
+  assign regUnit_io_rd = dataForwardingUnit_io_rd; // @[PiplineCPUwithForwarding.scala 235:17]
+  assign regUnit_io_writeEnable = dataForwardingUnit_io_writeEnable; // @[PiplineCPUwithForwarding.scala 232:26]
+  assign regUnit_io_writeData = dataForwardingUnit_io_data; // @[PiplineCPUwithForwarding.scala 236:24]
+  assign aluControlUnit_io_isBType = controlUnit_io_isBType; // @[PiplineCPUwithForwarding.scala 225:29]
+  assign aluControlUnit_io_isIType = controlUnit_io_isIType; // @[PiplineCPUwithForwarding.scala 226:29]
+  assign aluControlUnit_io_isRType = controlUnit_io_isRType; // @[PiplineCPUwithForwarding.scala 227:29]
+  assign aluControlUnit_io_isWord = controlUnit_io_isWord; // @[PiplineCPUwithForwarding.scala 228:28]
+  assign aluControlUnit_io_funct3 = ifIDStageRegs_io_out_inst[14:12]; // @[PiplineCPUwithForwarding.scala 116:22]
+  assign aluControlUnit_io_funct7 = ifIDStageRegs_io_out_inst[31:25]; // @[PiplineCPUwithForwarding.scala 117:22]
+  assign pcSelectUnit_io_pcPlus4 = idEXEStageRegs_io_out_pc + 64'h4; // @[PiplineCPUwithForwarding.scala 240:36]
+  assign pcSelectUnit_io_pcPlusImm = idEXEStageRegs_io_out_pc + idEXEStageRegs_io_out_imm; // @[PiplineCPUwithForwarding.scala 241:38]
+  assign pcSelectUnit_io_isJALR = idEXEStageRegs_io_out_isJALR; // @[PiplineCPUwithForwarding.scala 242:26]
+  assign pcSelectUnit_io_isBType = idEXEStageRegs_io_out_isBType; // @[PiplineCPUwithForwarding.scala 243:27]
+  assign pcSelectUnit_io_isJump = idEXEStageRegs_io_out_isJump; // @[PiplineCPUwithForwarding.scala 244:26]
+  assign pcSelectUnit_io_isTrue = alu_io_result[0]; // @[PiplineCPUwithForwarding.scala 245:42]
+  assign pcSelectUnit_io_aluResult = alu_io_result; // @[PiplineCPUwithForwarding.scala 246:29]
+  assign alu_io_aluOperation = idEXEStageRegs_io_out_aluOperation; // @[PiplineCPUwithForwarding.scala 248:23]
+  assign alu_io_x = idEXEStageRegs_io_out_aluX; // @[PiplineCPUwithForwarding.scala 249:12]
+  assign alu_io_y = idEXEStageRegs_io_out_aluY; // @[PiplineCPUwithForwarding.scala 250:12]
   assign dataMemory_clock = clock;
-  assign dataMemory_io_memRead = exeMEMStageRegs_io_out_memRead; // @[PiplineCPU.scala 228:25]
-  assign dataMemory_io_memWrite = exeMEMStageRegs_io_out_memWrite; // @[PiplineCPU.scala 229:26]
-  assign dataMemory_io_address = exeMEMStageRegs_io_out_aluResult; // @[PiplineCPU.scala 230:25]
-  assign dataMemory_io_writeData = exeMEMStageRegs_io_out_readDataRs2; // @[PiplineCPU.scala 231:27]
-  assign dataMemory_io_bitType = exeMEMStageRegs_io_out_inst[13:12]; // @[PiplineCPU.scala 108:24]
-  assign dataMemory_io_isUnsigned = exeMEMStageRegs_io_out_inst[14]; // @[PiplineCPU.scala 109:27]
-  assign resSelectUnit_io_isJump = memWBStageRegs_io_out_isJump; // @[PiplineCPU.scala 235:27]
-  assign resSelectUnit_io_immALUToReg = memWBStageRegs_io_out_immALUToReg; // @[PiplineCPU.scala 236:32]
-  assign resSelectUnit_io_memRead = memWBStageRegs_io_out_memRead; // @[PiplineCPU.scala 237:28]
-  assign resSelectUnit_io_readData = memWBStageRegs_io_out_readData; // @[PiplineCPU.scala 238:29]
-  assign resSelectUnit_io_aluResult = memWBStageRegs_io_out_aluResult; // @[PiplineCPU.scala 239:30]
-  assign resSelectUnit_io_imm = memWBStageRegs_io_out_imm; // @[PiplineCPU.scala 240:24]
-  assign resSelectUnit_io_pcPlus4 = memWBStageRegs_io_out_pc + 64'h4; // @[PiplineCPU.scala 241:36]
+  assign dataMemory_io_memRead = exeMEMStageRegs_io_out_memRead; // @[PiplineCPUwithForwarding.scala 252:25]
+  assign dataMemory_io_memWrite = exeMEMStageRegs_io_out_memWrite; // @[PiplineCPUwithForwarding.scala 253:26]
+  assign dataMemory_io_address = exeMEMStageRegs_io_out_aluResult; // @[PiplineCPUwithForwarding.scala 254:25]
+  assign dataMemory_io_writeData = exeMEMStageRegs_io_out_readDataRs2; // @[PiplineCPUwithForwarding.scala 255:27]
+  assign dataMemory_io_bitType = exeMEMStageRegs_io_out_inst[13:12]; // @[PiplineCPUwithForwarding.scala 119:24]
+  assign dataMemory_io_isUnsigned = exeMEMStageRegs_io_out_inst[14]; // @[PiplineCPUwithForwarding.scala 120:27]
+  assign resSelectUnit_io_isJump = memWBStageRegs_io_out_isJump; // @[PiplineCPUwithForwarding.scala 259:27]
+  assign resSelectUnit_io_immALUToReg = memWBStageRegs_io_out_immALUToReg; // @[PiplineCPUwithForwarding.scala 260:32]
+  assign resSelectUnit_io_memRead = memWBStageRegs_io_out_memRead; // @[PiplineCPUwithForwarding.scala 261:28]
+  assign resSelectUnit_io_readData = memWBStageRegs_io_out_readData; // @[PiplineCPUwithForwarding.scala 262:29]
+  assign resSelectUnit_io_aluResult = memWBStageRegs_io_out_aluResult; // @[PiplineCPUwithForwarding.scala 263:30]
+  assign resSelectUnit_io_imm = memWBStageRegs_io_out_imm; // @[PiplineCPUwithForwarding.scala 264:24]
+  assign resSelectUnit_io_pcPlus4 = memWBStageRegs_io_out_pc + 64'h4; // @[PiplineCPUwithForwarding.scala 265:36]
   assign ifIDStageRegs_clock = clock;
   assign ifIDStageRegs_reset = reset;
-  assign ifIDStageRegs_io_stall = dataControlUnit_io_stall; // @[PiplineCPU.scala 113:26]
-  assign ifIDStageRegs_io_flush = branchControlUnit_io_flush; // @[PiplineCPU.scala 114:26]
-  assign ifIDStageRegs_io_in_pc = pcReg_io_out; // @[PiplineCPU.scala 115:26]
-  assign ifIDStageRegs_io_in_inst = instMemory_io_inst; // @[PiplineCPU.scala 116:28]
+  assign ifIDStageRegs_io_stall = dataForwardingUnit_io_stall; // @[PiplineCPUwithForwarding.scala 124:26]
+  assign ifIDStageRegs_io_flush = branchControlUnit_io_flush; // @[PiplineCPUwithForwarding.scala 125:26]
+  assign ifIDStageRegs_io_in_pc = pcReg_io_out; // @[PiplineCPUwithForwarding.scala 126:26]
+  assign ifIDStageRegs_io_in_inst = instMemory_io_inst; // @[PiplineCPUwithForwarding.scala 127:28]
   assign idEXEStageRegs_clock = clock;
   assign idEXEStageRegs_reset = reset;
-  assign idEXEStageRegs_io_flush = dataControlUnit_io_flush; // @[PiplineCPU.scala 119:27]
-  assign idEXEStageRegs_io_in_pc = ifIDStageRegs_io_out_pc; // @[PiplineCPU.scala 120:27]
-  assign idEXEStageRegs_io_in_inst = ifIDStageRegs_io_out_inst; // @[PiplineCPU.scala 121:29]
-  assign idEXEStageRegs_io_in_isJALR = controlUnit_io_isJALR; // @[PiplineCPU.scala 122:31]
-  assign idEXEStageRegs_io_in_isBType = controlUnit_io_isBType; // @[PiplineCPU.scala 123:32]
-  assign idEXEStageRegs_io_in_isJump = controlUnit_io_isJump; // @[PiplineCPU.scala 124:31]
-  assign idEXEStageRegs_io_in_immALUToReg = controlUnit_io_immALUToReg; // @[PiplineCPU.scala 125:36]
-  assign idEXEStageRegs_io_in_memRead = controlUnit_io_memRead; // @[PiplineCPU.scala 126:32]
-  assign idEXEStageRegs_io_in_memWrite = controlUnit_io_memWrite; // @[PiplineCPU.scala 127:33]
-  assign idEXEStageRegs_io_in_writeEnable = controlUnit_io_ifWriteToReg; // @[PiplineCPU.scala 128:36]
-  assign idEXEStageRegs_io_in_aluOperation = aluControlUnit_io_aluOperation; // @[PiplineCPU.scala 129:37]
-  assign idEXEStageRegs_io_in_readDataRs2 = regUnit_io_readDataRs2; // @[PiplineCPU.scala 130:36]
-  assign idEXEStageRegs_io_in_rd = ifIDStageRegs_io_out_inst[11:7]; // @[PiplineCPU.scala 104:18]
-  assign idEXEStageRegs_io_in_aluX = controlUnit_io_pcRs1ToALU ? ifIDStageRegs_io_out_pc : regUnit_io_readDataRs1; // @[PiplineCPU.scala 132:35]
-  assign idEXEStageRegs_io_in_aluY = controlUnit_io_immRs2ToALU ? inst2ImmUnit_io_imm : regUnit_io_readDataRs2; // @[PiplineCPU.scala 137:35]
-  assign idEXEStageRegs_io_in_imm = inst2ImmUnit_io_imm; // @[PiplineCPU.scala 142:28]
+  assign idEXEStageRegs_io_flush = dataForwardingUnit_io_flush; // @[PiplineCPUwithForwarding.scala 130:27]
+  assign idEXEStageRegs_io_in_pc = ifIDStageRegs_io_out_pc; // @[PiplineCPUwithForwarding.scala 131:27]
+  assign idEXEStageRegs_io_in_inst = ifIDStageRegs_io_out_inst; // @[PiplineCPUwithForwarding.scala 132:29]
+  assign idEXEStageRegs_io_in_isJALR = controlUnit_io_isJALR; // @[PiplineCPUwithForwarding.scala 133:31]
+  assign idEXEStageRegs_io_in_isBType = controlUnit_io_isBType; // @[PiplineCPUwithForwarding.scala 134:32]
+  assign idEXEStageRegs_io_in_isJump = controlUnit_io_isJump; // @[PiplineCPUwithForwarding.scala 135:31]
+  assign idEXEStageRegs_io_in_immALUToReg = controlUnit_io_immALUToReg; // @[PiplineCPUwithForwarding.scala 136:36]
+  assign idEXEStageRegs_io_in_memRead = controlUnit_io_memRead; // @[PiplineCPUwithForwarding.scala 137:32]
+  assign idEXEStageRegs_io_in_memWrite = controlUnit_io_memWrite; // @[PiplineCPUwithForwarding.scala 138:33]
+  assign idEXEStageRegs_io_in_writeEnable = controlUnit_io_ifWriteToReg; // @[PiplineCPUwithForwarding.scala 139:36]
+  assign idEXEStageRegs_io_in_aluOperation = aluControlUnit_io_aluOperation; // @[PiplineCPUwithForwarding.scala 140:37]
+  assign idEXEStageRegs_io_in_readDataRs2 = dataForwardingUnit_io_forwardRs2 ? dataForwardingUnit_io_forwardData2 :
+    regUnit_io_readDataRs2; // @[PiplineCPUwithForwarding.scala 40:24]
+  assign idEXEStageRegs_io_in_rd = ifIDStageRegs_io_out_inst[11:7]; // @[PiplineCPUwithForwarding.scala 115:18]
+  assign idEXEStageRegs_io_in_aluX = controlUnit_io_pcRs1ToALU ? ifIDStageRegs_io_out_pc : readDataRs1; // @[PiplineCPUwithForwarding.scala 143:35]
+  assign idEXEStageRegs_io_in_aluY = controlUnit_io_immRs2ToALU ? inst2ImmUnit_io_imm : readDataRs2; // @[PiplineCPUwithForwarding.scala 148:35]
+  assign idEXEStageRegs_io_in_imm = inst2ImmUnit_io_imm; // @[PiplineCPUwithForwarding.scala 153:28]
   assign exeMEMStageRegs_clock = clock;
   assign exeMEMStageRegs_reset = reset;
-  assign exeMEMStageRegs_io_in_pc = idEXEStageRegs_io_out_pc; // @[PiplineCPU.scala 146:28]
-  assign exeMEMStageRegs_io_in_inst = idEXEStageRegs_io_out_inst; // @[PiplineCPU.scala 147:30]
-  assign exeMEMStageRegs_io_in_isJump = idEXEStageRegs_io_out_isJump; // @[PiplineCPU.scala 148:32]
-  assign exeMEMStageRegs_io_in_immALUToReg = idEXEStageRegs_io_out_immALUToReg; // @[PiplineCPU.scala 149:37]
-  assign exeMEMStageRegs_io_in_memRead = idEXEStageRegs_io_out_memRead; // @[PiplineCPU.scala 150:33]
-  assign exeMEMStageRegs_io_in_memWrite = idEXEStageRegs_io_out_memWrite; // @[PiplineCPU.scala 151:34]
-  assign exeMEMStageRegs_io_in_writeEnable = idEXEStageRegs_io_out_writeEnable; // @[PiplineCPU.scala 152:37]
-  assign exeMEMStageRegs_io_in_readDataRs2 = idEXEStageRegs_io_out_readDataRs2; // @[PiplineCPU.scala 153:37]
-  assign exeMEMStageRegs_io_in_rd = idEXEStageRegs_io_out_rd; // @[PiplineCPU.scala 154:28]
-  assign exeMEMStageRegs_io_in_aluResult = alu_io_result; // @[PiplineCPU.scala 155:35]
-  assign exeMEMStageRegs_io_in_imm = idEXEStageRegs_io_out_imm; // @[PiplineCPU.scala 156:29]
+  assign exeMEMStageRegs_io_in_pc = idEXEStageRegs_io_out_pc; // @[PiplineCPUwithForwarding.scala 157:28]
+  assign exeMEMStageRegs_io_in_inst = idEXEStageRegs_io_out_inst; // @[PiplineCPUwithForwarding.scala 158:30]
+  assign exeMEMStageRegs_io_in_isJump = idEXEStageRegs_io_out_isJump; // @[PiplineCPUwithForwarding.scala 159:32]
+  assign exeMEMStageRegs_io_in_immALUToReg = idEXEStageRegs_io_out_immALUToReg; // @[PiplineCPUwithForwarding.scala 160:37]
+  assign exeMEMStageRegs_io_in_memRead = idEXEStageRegs_io_out_memRead; // @[PiplineCPUwithForwarding.scala 161:33]
+  assign exeMEMStageRegs_io_in_memWrite = idEXEStageRegs_io_out_memWrite; // @[PiplineCPUwithForwarding.scala 162:34]
+  assign exeMEMStageRegs_io_in_writeEnable = idEXEStageRegs_io_out_writeEnable; // @[PiplineCPUwithForwarding.scala 163:37]
+  assign exeMEMStageRegs_io_in_readDataRs2 = idEXEStageRegs_io_out_readDataRs2; // @[PiplineCPUwithForwarding.scala 164:37]
+  assign exeMEMStageRegs_io_in_rd = idEXEStageRegs_io_out_rd; // @[PiplineCPUwithForwarding.scala 165:28]
+  assign exeMEMStageRegs_io_in_aluResult = alu_io_result; // @[PiplineCPUwithForwarding.scala 166:35]
+  assign exeMEMStageRegs_io_in_imm = idEXEStageRegs_io_out_imm; // @[PiplineCPUwithForwarding.scala 167:29]
   assign memWBStageRegs_clock = clock;
   assign memWBStageRegs_reset = reset;
-  assign memWBStageRegs_io_in_pc = exeMEMStageRegs_io_out_pc; // @[PiplineCPU.scala 160:27]
-  assign memWBStageRegs_io_in_inst = exeMEMStageRegs_io_out_inst; // @[PiplineCPU.scala 161:29]
-  assign memWBStageRegs_io_in_isJump = exeMEMStageRegs_io_out_isJump; // @[PiplineCPU.scala 162:31]
-  assign memWBStageRegs_io_in_immALUToReg = exeMEMStageRegs_io_out_immALUToReg; // @[PiplineCPU.scala 163:36]
-  assign memWBStageRegs_io_in_memRead = exeMEMStageRegs_io_out_memRead; // @[PiplineCPU.scala 164:32]
-  assign memWBStageRegs_io_in_writeEnable = exeMEMStageRegs_io_out_writeEnable; // @[PiplineCPU.scala 165:36]
-  assign memWBStageRegs_io_in_readData = dataMemory_io_readData; // @[PiplineCPU.scala 166:33]
-  assign memWBStageRegs_io_in_aluResult = exeMEMStageRegs_io_out_aluResult; // @[PiplineCPU.scala 168:34]
-  assign memWBStageRegs_io_in_imm = exeMEMStageRegs_io_out_imm; // @[PiplineCPU.scala 169:28]
+  assign memWBStageRegs_io_in_pc = exeMEMStageRegs_io_out_pc; // @[PiplineCPUwithForwarding.scala 171:27]
+  assign memWBStageRegs_io_in_inst = exeMEMStageRegs_io_out_inst; // @[PiplineCPUwithForwarding.scala 172:29]
+  assign memWBStageRegs_io_in_isJump = exeMEMStageRegs_io_out_isJump; // @[PiplineCPUwithForwarding.scala 173:31]
+  assign memWBStageRegs_io_in_immALUToReg = exeMEMStageRegs_io_out_immALUToReg; // @[PiplineCPUwithForwarding.scala 174:36]
+  assign memWBStageRegs_io_in_memRead = exeMEMStageRegs_io_out_memRead; // @[PiplineCPUwithForwarding.scala 175:32]
+  assign memWBStageRegs_io_in_writeEnable = exeMEMStageRegs_io_out_writeEnable; // @[PiplineCPUwithForwarding.scala 176:36]
+  assign memWBStageRegs_io_in_readData = dataMemory_io_readData; // @[PiplineCPUwithForwarding.scala 177:33]
+  assign memWBStageRegs_io_in_aluResult = exeMEMStageRegs_io_out_aluResult; // @[PiplineCPUwithForwarding.scala 179:34]
+  assign memWBStageRegs_io_in_imm = exeMEMStageRegs_io_out_imm; // @[PiplineCPUwithForwarding.scala 180:28]
   assign branchControlUnit_clock = clock;
   assign branchControlUnit_reset = reset;
-  assign branchControlUnit_io_keep = dataControlUnit_io_keep; // @[PiplineCPU.scala 171:29]
-  assign branchControlUnit_io_isJump = controlUnit_io_isJump; // @[PiplineCPU.scala 172:31]
-  assign branchControlUnit_io_isBType = controlUnit_io_isBType; // @[PiplineCPU.scala 173:32]
-  assign branchControlUnit_io_ifPC = pcReg_io_out; // @[PiplineCPU.scala 174:29]
-  assign branchControlUnit_io_idPC = ifIDStageRegs_io_out_pc; // @[PiplineCPU.scala 175:29]
-  assign branchControlUnit_io_exePC = idEXEStageRegs_io_out_pc; // @[PiplineCPU.scala 176:30]
-  assign branchControlUnit_io_selectPC = pcSelectUnit_io_nextPC; // @[PiplineCPU.scala 177:33]
-  assign dataControlUnit_clock = clock;
-  assign dataControlUnit_reset = reset;
-  assign dataControlUnit_io_inWriteEnable = memWBStageRegs_io_out_writeEnable; // @[PiplineCPU.scala 179:36]
-  assign dataControlUnit_io_inRd = memWBStageRegs_io_out_inst[11:7]; // @[PiplineCPU.scala 111:20]
-  assign dataControlUnit_io_inData = resSelectUnit_io_out; // @[PiplineCPU.scala 181:29]
-  assign dataControlUnit_io_pcRs1ToAlu = controlUnit_io_pcRs1ToALU; // @[PiplineCPU.scala 182:33]
-  assign dataControlUnit_io_rs1 = ifIDStageRegs_io_out_inst[19:15]; // @[PiplineCPU.scala 102:19]
-  assign dataControlUnit_io_memWrite = controlUnit_io_memWrite; // @[PiplineCPU.scala 184:31]
-  assign dataControlUnit_io_immRs2ToAlu = controlUnit_io_immRs2ToALU; // @[PiplineCPU.scala 185:34]
-  assign dataControlUnit_io_rs2 = ifIDStageRegs_io_out_inst[24:20]; // @[PiplineCPU.scala 103:19]
-  assign dataControlUnit_io_exeWriteEnable = idEXEStageRegs_io_out_writeEnable; // @[PiplineCPU.scala 187:37]
-  assign dataControlUnit_io_exeRd = idEXEStageRegs_io_out_rd; // @[PiplineCPU.scala 188:28]
-  assign dataControlUnit_io_memWriteEnable = exeMEMStageRegs_io_out_writeEnable; // @[PiplineCPU.scala 189:37]
-  assign dataControlUnit_io_memRd = exeMEMStageRegs_io_out_rd; // @[PiplineCPU.scala 190:28]
-  assign dataControlUnit_io_exePC = idEXEStageRegs_io_out_pc; // @[PiplineCPU.scala 191:28]
-  assign dataControlUnit_io_memPC = exeMEMStageRegs_io_out_pc; // @[PiplineCPU.scala 192:28]
-  assign dataControlUnit_io_wbPC = memWBStageRegs_io_out_pc; // @[PiplineCPU.scala 193:27]
+  assign branchControlUnit_io_keep = dataForwardingUnit_io_keep; // @[PiplineCPUwithForwarding.scala 182:29]
+  assign branchControlUnit_io_isJump = controlUnit_io_isJump; // @[PiplineCPUwithForwarding.scala 183:31]
+  assign branchControlUnit_io_isBType = controlUnit_io_isBType; // @[PiplineCPUwithForwarding.scala 184:32]
+  assign branchControlUnit_io_ifPC = pcReg_io_out; // @[PiplineCPUwithForwarding.scala 185:29]
+  assign branchControlUnit_io_idPC = ifIDStageRegs_io_out_pc; // @[PiplineCPUwithForwarding.scala 186:29]
+  assign branchControlUnit_io_exePC = idEXEStageRegs_io_out_pc; // @[PiplineCPUwithForwarding.scala 187:30]
+  assign branchControlUnit_io_selectPC = pcSelectUnit_io_nextPC; // @[PiplineCPUwithForwarding.scala 188:33]
+  assign dataForwardingUnit_clock = clock;
+  assign dataForwardingUnit_reset = reset;
+  assign dataForwardingUnit_io_inWriteEnable = memWBStageRegs_io_out_writeEnable; // @[PiplineCPUwithForwarding.scala 190:39]
+  assign dataForwardingUnit_io_inRd = memWBStageRegs_io_out_inst[11:7]; // @[PiplineCPUwithForwarding.scala 122:20]
+  assign dataForwardingUnit_io_inData = resSelectUnit_io_out; // @[PiplineCPUwithForwarding.scala 192:32]
+  assign dataForwardingUnit_io_pcRs1ToAlu = controlUnit_io_pcRs1ToALU; // @[PiplineCPUwithForwarding.scala 193:36]
+  assign dataForwardingUnit_io_rs1 = ifIDStageRegs_io_out_inst[19:15]; // @[PiplineCPUwithForwarding.scala 113:19]
+  assign dataForwardingUnit_io_memWrite = controlUnit_io_memWrite; // @[PiplineCPUwithForwarding.scala 195:34]
+  assign dataForwardingUnit_io_immRs2ToAlu = controlUnit_io_immRs2ToALU; // @[PiplineCPUwithForwarding.scala 196:37]
+  assign dataForwardingUnit_io_rs2 = ifIDStageRegs_io_out_inst[24:20]; // @[PiplineCPUwithForwarding.scala 114:19]
+  assign dataForwardingUnit_io_exeWriteEnable = idEXEStageRegs_io_out_writeEnable; // @[PiplineCPUwithForwarding.scala 198:40]
+  assign dataForwardingUnit_io_exeRd = idEXEStageRegs_io_out_rd; // @[PiplineCPUwithForwarding.scala 199:31]
+  assign dataForwardingUnit_io_memWriteEnable = exeMEMStageRegs_io_out_writeEnable; // @[PiplineCPUwithForwarding.scala 200:40]
+  assign dataForwardingUnit_io_memRd = exeMEMStageRegs_io_out_rd; // @[PiplineCPUwithForwarding.scala 201:31]
+  assign dataForwardingUnit_io_exeIsJump = idEXEStageRegs_io_out_isJump; // @[PiplineCPUwithForwarding.scala 203:35]
+  assign dataForwardingUnit_io_exeImmALUToReg = idEXEStageRegs_io_out_immALUToReg; // @[PiplineCPUwithForwarding.scala 204:40]
+  assign dataForwardingUnit_io_exeMemRead = idEXEStageRegs_io_out_memRead; // @[PiplineCPUwithForwarding.scala 205:36]
+  assign dataForwardingUnit_io_exeALUResult = alu_io_result; // @[PiplineCPUwithForwarding.scala 206:38]
+  assign dataForwardingUnit_io_exeImm = idEXEStageRegs_io_out_imm; // @[PiplineCPUwithForwarding.scala 207:32]
+  assign dataForwardingUnit_io_memIsJump = exeMEMStageRegs_io_out_isJump; // @[PiplineCPUwithForwarding.scala 209:35]
+  assign dataForwardingUnit_io_memImmALUToReg = exeMEMStageRegs_io_out_immALUToReg; // @[PiplineCPUwithForwarding.scala 210:40]
+  assign dataForwardingUnit_io_memMemRead = exeMEMStageRegs_io_out_memRead; // @[PiplineCPUwithForwarding.scala 211:36]
+  assign dataForwardingUnit_io_memReadData = dataMemory_io_readData; // @[PiplineCPUwithForwarding.scala 212:37]
+  assign dataForwardingUnit_io_memALUResult = exeMEMStageRegs_io_out_aluResult; // @[PiplineCPUwithForwarding.scala 213:38]
+  assign dataForwardingUnit_io_memImm = exeMEMStageRegs_io_out_imm; // @[PiplineCPUwithForwarding.scala 214:32]
+  assign dataForwardingUnit_io_exePC = idEXEStageRegs_io_out_pc; // @[PiplineCPUwithForwarding.scala 216:31]
+  assign dataForwardingUnit_io_memPC = exeMEMStageRegs_io_out_pc; // @[PiplineCPUwithForwarding.scala 217:31]
 endmodule

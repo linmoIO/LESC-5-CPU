@@ -103,6 +103,7 @@ object DebugControl {
   /* CPU 打印信息控制 */
   val SingleCycleCPUPrint = false
   val PiplineCPUPrint = false
+  val PiplineCPUwithForwardingPrint = false
   val RegPrint = false // 32 个寄存器状态打印
 }
 

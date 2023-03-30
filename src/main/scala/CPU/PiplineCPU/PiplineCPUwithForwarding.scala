@@ -11,7 +11,7 @@ import CPU.PiplineComponts._
 import dataclass.data
 
 /**
- * <b>[流水线 CPU]]</b>
+ * <b>[带旁路转发的流水线 CPU]]</b>
  * <p>
  * 流水线 CPU 顶层架构
  * @param instFile
@@ -21,16 +21,26 @@ import dataclass.data
  * @param startAddress
  *  CPU 开始运行的起始指令位置
  */
-class PiplineCPU(
+class PiplineCPUwithForwarding(
     instFile: String = "",
     dataFile: String = "",
     startAddress: Int = 0x0
 ) extends PiplineCPUGeneral(instFile, dataFile, startAddress) {
   /* 创建组件 */
   val branchControlUnit = Module(new BranchControlUnit())
-  val dataControlUnit = Module(new DataControlUnit())
+  val dataForwardingUnit = Module(new DataForwardingUnit())
 
   /* 连接 CPU 的输出 */
+  val readDataRs1 = Mux(
+    dataForwardingUnit.io.forwardRs1, // 旁路转发
+    dataForwardingUnit.io.forwardData1,
+    regUnit.io.readDataRs1
+  )
+  val readDataRs2 = Mux(
+    dataForwardingUnit.io.forwardRs2, // 旁路转发
+    dataForwardingUnit.io.forwardData2,
+    regUnit.io.readDataRs2
+  )
 
   io.isValidInst := controlUnit.io.isValidInst
 
@@ -72,9 +82,9 @@ class PiplineCPU(
   io.aluOperation := alu.io.aluOperation
   io.imm := inst2ImmUnit.io.imm
   io.rs1 := regUnit.io.rs1
-  io.readDataRs1 := regUnit.io.readDataRs1
+  io.readDataRs1 := readDataRs1
   io.rs2 := regUnit.io.rs2
-  io.readDataRs2 := regUnit.io.readDataRs2
+  io.readDataRs2 := readDataRs2
   io.rd := regUnit.io.rd
   io.nextPC := branchControlUnit.io.nextPC
 
@@ -110,13 +120,13 @@ class PiplineCPU(
 
   val wbRd = wbInst(11, 7)
 
-  ifIDStageRegs.io.stall := dataControlUnit.io.stall
+  ifIDStageRegs.io.stall := dataForwardingUnit.io.stall
   ifIDStageRegs.io.flush := branchControlUnit.io.flush
   ifIDStageRegs.io.in.pc := pcReg.io.out
   ifIDStageRegs.io.in.inst := instMemory.io.inst
 
   idEXEStageRegs.io.stall := false.B
-  idEXEStageRegs.io.flush := dataControlUnit.io.flush
+  idEXEStageRegs.io.flush := dataForwardingUnit.io.flush
   idEXEStageRegs.io.in.pc := ifIDStageRegs.io.out.pc
   idEXEStageRegs.io.in.inst := ifIDStageRegs.io.out.inst
   idEXEStageRegs.io.in.isJALR := controlUnit.io.isJALR
@@ -127,17 +137,17 @@ class PiplineCPU(
   idEXEStageRegs.io.in.memWrite := controlUnit.io.memWrite
   idEXEStageRegs.io.in.writeEnable := controlUnit.io.ifWriteToReg
   idEXEStageRegs.io.in.aluOperation := aluControlUnit.io.aluOperation
-  idEXEStageRegs.io.in.readDataRs2 := regUnit.io.readDataRs2
+  idEXEStageRegs.io.in.readDataRs2 := readDataRs2
   idEXEStageRegs.io.in.rd := rd
   idEXEStageRegs.io.in.aluX := Mux(
     controlUnit.io.pcRs1ToALU,
     ifIDStageRegs.io.out.pc,
-    regUnit.io.readDataRs1
+    readDataRs1
   )
   idEXEStageRegs.io.in.aluY := Mux(
     controlUnit.io.immRs2ToALU,
     inst2ImmUnit.io.imm,
-    regUnit.io.readDataRs2
+    readDataRs2
   )
   idEXEStageRegs.io.in.imm := inst2ImmUnit.io.imm
 
@@ -168,7 +178,7 @@ class PiplineCPU(
   memWBStageRegs.io.in.aluResult := exeMEMStageRegs.io.out.aluResult
   memWBStageRegs.io.in.imm := exeMEMStageRegs.io.out.imm
 
-  branchControlUnit.io.keep := dataControlUnit.io.keep
+  branchControlUnit.io.keep := dataForwardingUnit.io.keep
   branchControlUnit.io.isJump := controlUnit.io.isJump
   branchControlUnit.io.isBType := controlUnit.io.isBType
   branchControlUnit.io.ifPC := ifPC
@@ -176,21 +186,34 @@ class PiplineCPU(
   branchControlUnit.io.exePC := exePC
   branchControlUnit.io.selectPC := pcSelectUnit.io.nextPC
 
-  dataControlUnit.io.inWriteEnable := memWBStageRegs.io.out.writeEnable
-  dataControlUnit.io.inRd := wbRd
-  dataControlUnit.io.inData := resSelectUnit.io.out
-  dataControlUnit.io.pcRs1ToAlu := controlUnit.io.pcRs1ToALU
-  dataControlUnit.io.rs1 := rs1
-  dataControlUnit.io.memWrite := controlUnit.io.memWrite
-  dataControlUnit.io.immRs2ToAlu := controlUnit.io.immRs2ToALU
-  dataControlUnit.io.rs2 := rs2
-  dataControlUnit.io.exeWriteEnable := idEXEStageRegs.io.out.writeEnable
-  dataControlUnit.io.exeRd := idEXEStageRegs.io.out.rd
-  dataControlUnit.io.memWriteEnable := exeMEMStageRegs.io.out.writeEnable
-  dataControlUnit.io.memRd := exeMEMStageRegs.io.out.rd
-  dataControlUnit.io.exePC := exePC
-  dataControlUnit.io.memPC := memPC
-  dataControlUnit.io.wbPC := wbPC
+  dataForwardingUnit.io.inWriteEnable := memWBStageRegs.io.out.writeEnable
+  dataForwardingUnit.io.inRd := wbRd
+  dataForwardingUnit.io.inData := resSelectUnit.io.out
+  dataForwardingUnit.io.pcRs1ToAlu := controlUnit.io.pcRs1ToALU
+  dataForwardingUnit.io.rs1 := rs1
+  dataForwardingUnit.io.memWrite := controlUnit.io.memWrite
+  dataForwardingUnit.io.immRs2ToAlu := controlUnit.io.immRs2ToALU
+  dataForwardingUnit.io.rs2 := rs2
+  dataForwardingUnit.io.exeWriteEnable := idEXEStageRegs.io.out.writeEnable
+  dataForwardingUnit.io.exeRd := idEXEStageRegs.io.out.rd
+  dataForwardingUnit.io.memWriteEnable := exeMEMStageRegs.io.out.writeEnable
+  dataForwardingUnit.io.memRd := exeMEMStageRegs.io.out.rd
+
+  dataForwardingUnit.io.exeIsJump := idEXEStageRegs.io.out.isJump
+  dataForwardingUnit.io.exeImmALUToReg := idEXEStageRegs.io.out.immALUToReg
+  dataForwardingUnit.io.exeMemRead := idEXEStageRegs.io.out.memRead
+  dataForwardingUnit.io.exeALUResult := alu.io.result
+  dataForwardingUnit.io.exeImm := idEXEStageRegs.io.out.imm
+
+  dataForwardingUnit.io.memIsJump := exeMEMStageRegs.io.out.isJump
+  dataForwardingUnit.io.memImmALUToReg := exeMEMStageRegs.io.out.immALUToReg
+  dataForwardingUnit.io.memMemRead := exeMEMStageRegs.io.out.memRead
+  dataForwardingUnit.io.memReadData := dataMemory.io.readData
+  dataForwardingUnit.io.memALUResult := exeMEMStageRegs.io.out.aluResult
+  dataForwardingUnit.io.memImm := exeMEMStageRegs.io.out.imm
+
+  dataForwardingUnit.io.exePC := exePC
+  dataForwardingUnit.io.memPC := memPC
 
   pcReg.io.in := branchControlUnit.io.nextPC
 
@@ -205,11 +228,11 @@ class PiplineCPU(
   aluControlUnit.io.funct3 := funct3
   aluControlUnit.io.funct7 := funct7
 
-  regUnit.io.writeEnable := dataControlUnit.io.writeEnable
+  regUnit.io.writeEnable := dataForwardingUnit.io.writeEnable
   regUnit.io.rs1 := rs1
   regUnit.io.rs2 := rs2
-  regUnit.io.rd := dataControlUnit.io.rd
-  regUnit.io.writeData := dataControlUnit.io.data
+  regUnit.io.rd := dataForwardingUnit.io.rd
+  regUnit.io.writeData := dataForwardingUnit.io.data
 
   inst2ImmUnit.io.inst := idInst
 
@@ -241,14 +264,14 @@ class PiplineCPU(
   resSelectUnit.io.pcPlus4 := wbPC + 4.U
 }
 
-object PiplineCPU {
+object PiplineCPUwithForwarding {
   def main(args: Array[String]) = {
-    print(getVerilogString(new PiplineCPU()))
+    print(getVerilogString(new PiplineCPUwithForwarding()))
     emitVerilog(
-      new PiplineCPU(),
+      new PiplineCPUwithForwarding(),
       Array(
         "--target-dir",
-        s"generated/${PiplineCPU.toString().split('$')(0).split('.').last}"
+        s"generated/${PiplineCPUwithForwarding.toString().split('$')(0).split('.').last}"
       )
     )
     print("\n[Success]\n")

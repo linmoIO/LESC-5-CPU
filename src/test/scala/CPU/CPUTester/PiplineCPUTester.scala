@@ -17,20 +17,22 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import firrtl.FileUtils
 
+import CPU.PiplineCPU.PiplineCPUGeneral
 import CPU.PiplineCPU.PiplineCPU
+import CPU.PiplineCPU.PiplineCPUwithForwarding
 
 trait TestFuncPiplineCPU {
 
   /* 控制信号 */
   val printToFile = true // 是否打印到文件
-  val timeOut = 100000 // 超时, 以周期为单位, 0 表示无限制
+  val timeOut = 2000 // 超时, 以周期为单位, 0 表示无限制
   val begin = 0 // 开始完全输出的起始周期
   val end = 0 // 结束完全输出的结束周期, 0 表示不会结束
   val printInstPC = true // 是否由 Tester 打印指令和 PC
   val printReg = DebugControl.RegPrint // 是否打印 32 个寄存器状态
   var printAll = true // 是否由 Tester 打印 CPU 的详细信息
 
-  def testFn(dut: PiplineCPU, myPrint: Any => Unit) = {
+  def testFn(dut: PiplineCPUGeneral, myPrint: Any => Unit) = {
     var i = 1 // 当前周期数
 
     myPrint(s"[INFO] 开始测试 ${dut.name}\n")
@@ -272,8 +274,15 @@ class PiplineCPUTester
       var myPrint: Any => Unit = print
       var outFile: PrintWriter = null
 
+      val ifHasForwarding = true // 是否有旁路转发
+
       if (printToFile) {
-        val filePath = s"${dir}/${fileName}_pipline.log"
+        val filePath =
+          if (ifHasForwarding)
+            s"${dir}/${fileName}_pipline_forwarding.log"
+          else
+            s"${dir}/${fileName}_pipline.log"
+
         println(s"[INFO] 将 CPU 输出信息写入到 ${filePath} 中")
 
         outFile = new PrintWriter(filePath)
@@ -281,8 +290,17 @@ class PiplineCPUTester
       }
 
       val dataPathFinal = if (needData) dataPath else ""
-      test(new PiplineCPU(instPath, dataPathFinal, startAddress)) { dut =>
-        testFn(dut, myPrint)
+
+      if (ifHasForwarding) {
+        test(
+          new PiplineCPUwithForwarding(instPath, dataPathFinal, startAddress)
+        ) { dut =>
+          testFn(dut, myPrint)
+        }
+      } else {
+        test(new PiplineCPU(instPath, dataPathFinal, startAddress)) { dut =>
+          testFn(dut, myPrint)
+        }
       }
 
       if (printToFile && outFile != null) {
