@@ -26,7 +26,7 @@ trait TestFuncPiplineCPU {
 
   /* 控制信号 */
   val printToFile = true // 是否打印到文件
-  val timeOut = 2000 // 超时, 以周期为单位, 0 表示无限制
+  val timeOut = 3000 // 超时, 以周期为单位, 0 表示无限制
   val begin = 0 // 开始完全输出的起始周期
   val end = 0 // 结束完全输出的结束周期, 0 表示不会结束
   val printInstPC = true // 是否由 Tester 打印指令和 PC
@@ -231,10 +231,10 @@ class PiplineCPUTester
     with ChiselScalatestTester
     with TestcaseSet
     with TestFuncPiplineCPU {
-
-  "CPU" should "pass" in {
-    // sbt "testOnly CPU.CPUTester.PiplineCPUTester" > src/test/hex/fibonacci/pipline_stage.log
-
+  def testPiplineCPUGeneral(
+      ifHasBranchPredictor: Boolean, // 是否有分支预测
+      ifHasForwarding: Boolean // 是否有旁路转发
+  ) = {
     for (testcasePair <- testcases) {
       val dir = s"${System
           .getProperty("user.dir")}/${testcasePair._1}"
@@ -275,9 +275,6 @@ class PiplineCPUTester
       var myPrint: Any => Unit = print
       var outFile: PrintWriter = null
 
-      val ifHasBranchPredictor = true // 是否有分支预测
-      val ifHasForwarding = true // 是否有旁路转发
-
       if (printToFile) {
         val filePath =
           if (ifHasBranchPredictor)
@@ -316,5 +313,20 @@ class PiplineCPUTester
         outFile.close()
       }
     }
+  }
+
+  // 记录 sbt 指令
+  // sbt "testOnly CPU.CPUTester.PiplineCPUTester" > src/test/hex/fibonacci/pipline_stage.log
+
+  "Base CPU" should "pass" in {
+    testPiplineCPUGeneral(false, false) // 无分支预测, 无旁路转发
+  }
+
+  "CPU with ByPass Forwarding" should "pass" in {
+    testPiplineCPUGeneral(false, true) // 无分支预测, 有旁路转发
+  }
+
+  "CPU with BF and F" should "pass" in {
+    testPiplineCPUGeneral(true, true) // 有分支预测, 有旁路转发
   }
 }

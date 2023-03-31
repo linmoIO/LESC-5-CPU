@@ -258,7 +258,11 @@ class SingleCycleCPUTester
 }
 
 trait TestcaseSet { // 测试集
-  val testcases = List(
+  val testcasesTest = List(
+    /* dir, fileName, startAddress */
+    ("src/test/hex/myTest", "myTest", 0x0)
+  )
+  val testcasesBase = List(
     /* dir, fileName, startAddress */
 
     ("src/test/hex/fibonacci_recursion", "fibonacci_recursion", 0x98), // 耗时比较长
@@ -393,4 +397,8 @@ trait TestcaseSet { // 测试集
     // ("src/test/hex/dino/target/csrrsi", "csrrsi", 0x0),
     // ("src/test/hex/dino/target/mret", "mret", 0x0),
   )
+
+  val ifAllTest = true // 是否全部测试
+
+  val testcases = if (ifAllTest) testcasesBase else testcasesTest
 }

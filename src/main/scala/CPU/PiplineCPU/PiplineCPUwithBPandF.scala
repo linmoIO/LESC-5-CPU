@@ -188,9 +188,6 @@ class PiplineCPUwithBPandF(
   branchPredictor.io.selectPC := pcSelectUnit.io.nextPC
   branchPredictor.io.jump := pcSelectUnit.io.jump
 
-  dataForwardingUnit.io.inWriteEnable := memWBStageRegs.io.out.writeEnable
-  dataForwardingUnit.io.inRd := wbRd
-  dataForwardingUnit.io.inData := resSelectUnit.io.out
   dataForwardingUnit.io.pcRs1ToAlu := controlUnit.io.pcRs1ToALU
   dataForwardingUnit.io.rs1 := rs1
   dataForwardingUnit.io.memWrite := controlUnit.io.memWrite
@@ -230,11 +227,11 @@ class PiplineCPUwithBPandF(
   aluControlUnit.io.funct3 := funct3
   aluControlUnit.io.funct7 := funct7
 
-  regUnit.io.writeEnable := dataForwardingUnit.io.writeEnable
+  regUnit.io.writeEnable := memWBStageRegs.io.out.writeEnable
   regUnit.io.rs1 := rs1
   regUnit.io.rs2 := rs2
-  regUnit.io.rd := dataForwardingUnit.io.rd
-  regUnit.io.writeData := dataForwardingUnit.io.data
+  regUnit.io.rd := wbRd
+  regUnit.io.writeData := resSelectUnit.io.out
 
   inst2ImmUnit.io.inst := idInst
 
