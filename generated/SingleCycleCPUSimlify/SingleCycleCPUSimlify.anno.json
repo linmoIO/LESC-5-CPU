@@ -2,14 +2,14 @@
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~SingleCycleCPUSimlify|Adder",
-    "duplicate":"~SingleCycleCPUSimlify|SingleCycleCPUSimlify/pcAdd4:Adder",
-    "index":0.08333333333333333
+    "duplicate":"~SingleCycleCPUSimlify|SingleCycleCPUSimlify/cpu:SingleCycleCPU/pcAdd4:Adder",
+    "index":0.07692307692307693
   },
   {
     "class":"firrtl.transforms.DedupedResult",
     "original":"~SingleCycleCPUSimlify|Adder_1",
-    "duplicate":"~SingleCycleCPUSimlify|SingleCycleCPUSimlify/pcAddImm:Adder",
-    "index":0.16666666666666666
+    "duplicate":"~SingleCycleCPUSimlify|SingleCycleCPUSimlify/cpu:SingleCycleCPU/pcAddImm:Adder",
+    "index":0.15384615384615385
   },
   {
     "class":"firrtl.EmitCircuitAnnotation",

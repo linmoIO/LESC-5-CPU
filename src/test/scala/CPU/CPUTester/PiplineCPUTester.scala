@@ -26,7 +26,7 @@ trait TestFuncPiplineCPU {
 
   /* 控制信号 */
   val printToFile = true // 是否打印到文件
-  val timeOut = 3000 // 超时, 以周期为单位, 0 表示无限制
+  val timeOut = TIME_OUT // 超时, 以周期为单位, 0 表示无限制
   val begin = 0 // 开始完全输出的起始周期
   val end = 0 // 结束完全输出的结束周期, 0 表示不会结束
   val printInstPC = true // 是否由 Tester 打印指令和 PC
@@ -312,6 +312,8 @@ class PiplineCPUTester
       if (printToFile && outFile != null) {
         outFile.close()
       }
+
+      println()
     }
   }
 

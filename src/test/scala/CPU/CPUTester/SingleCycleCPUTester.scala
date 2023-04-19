@@ -22,7 +22,7 @@ trait TestFuncSingleCycleCPU {
 
   /* 控制信号 */
   val printToFile = true // 是否打印到文件
-  val timeOut = 100000 // 超时, 以周期为单位, 0 表示无限制
+  val timeOut = TIME_OUT // 超时, 以周期为单位, 0 表示无限制
   val begin = 0 // 开始完全输出的起始周期
   val end = 0 // 结束完全输出的结束周期, 0 表示不会结束
   val printInstPC = true // 是否由 Tester 打印指令和 PC
@@ -253,6 +253,8 @@ class SingleCycleCPUTester
       if (printToFile && outFile != null) {
         outFile.close()
       }
+
+      println()
     }
   }
 }
@@ -260,7 +262,12 @@ class SingleCycleCPUTester
 trait TestcaseSet { // 测试集
   val testcasesTest = List(
     /* dir, fileName, startAddress */
-    ("src/test/hex/myTest", "myTest", 0x0)
+    ("src/test/hex/median", "median", 0x0),
+    ("src/test/hex/multiply", "multiply", 0x0),
+    ("src/test/hex/qsort", "qsort", 0x0),
+    ("src/test/hex/rsort", "rsort", 0x0),
+    ("src/test/hex/towers", "towers", 0x0),
+    ("src/test/hex/vvadd", "vvadd", 0x0)
   )
   val testcasesBase = List(
     /* dir, fileName, startAddress */
@@ -268,6 +275,14 @@ trait TestcaseSet { // 测试集
     ("src/test/hex/fibonacci_recursion", "fibonacci_recursion", 0x98), // 耗时比较长
     ("src/test/hex/fibonacci", "fibonacci", 0xb8),
     ("src/test/hex/myTest", "myTest", 0x0),
+
+    /* c markbench */
+    ("src/test/hex/median", "median", 0x0),
+    ("src/test/hex/multiply", "multiply", 0x0),
+    ("src/test/hex/qsort", "qsort", 0x0),
+    ("src/test/hex/rsort", "rsort", 0x0),
+    ("src/test/hex/towers", "towers", 0x0),
+    ("src/test/hex/vvadd", "vvadd", 0x0),
 
     /* dino */
     ("src/test/hex/dino/target/add0", "add0", 0x0),
@@ -374,17 +389,17 @@ trait TestcaseSet { // 测试集
     ("src/test/hex/dino/target/lwu", "lwu", 0x0),
     ("src/test/hex/dino/target/lwu1", "lwu1", 0x0),
     ("src/test/hex/dino/target/ld2", "ld2", 0x0),
-    // // ("src/test/hex/dino/target/sort", "sort", 0x0) // 代码有错误
+    ("src/test/hex/dino/target/ldfwd", "ldfwd", 0x0),
+    ("src/test/hex/dino/target/swfwd1", "swfwd1", 0x0),
+    ("src/test/hex/dino/target/swfwd2", "swfwd2", 0x0),
 
     /* 综合的 */
     ("src/test/hex/dino/target/divider", "divider", 0x0),
-    ("src/test/hex/dino/target/ldfwd", "ldfwd", 0x0),
     ("src/test/hex/dino/target/test", "test", 0x0),
-    ("src/test/hex/dino/target/swfwd1", "swfwd1", 0x0),
     ("src/test/hex/dino/target/multiplier", "multiplier", 0x0),
     ("src/test/hex/dino/target/naturalsum", "naturalsum", 0x0),
-    ("src/test/hex/dino/target/fibonacci", "fibonacci", 0x0),
-    ("src/test/hex/dino/target/swfwd2", "swfwd2", 0x0)
+    ("src/test/hex/dino/target/fibonacci", "fibonacci", 0x0)
+    // // ("src/test/hex/dino/target/sort", "sort", 0x0) // 代码有错误
 
     /* 尚未实现的指令 */
     // ("src/test/hex/dino/target/ebreak", "ebreak", 0x0),
@@ -398,7 +413,7 @@ trait TestcaseSet { // 测试集
     // ("src/test/hex/dino/target/mret", "mret", 0x0),
   )
 
-  val ifAllTest = true // 是否全部测试
+  val ifAllTest = false // 是否全部测试
 
   val testcases = if (ifAllTest) testcasesBase else testcasesTest
 }

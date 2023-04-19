@@ -254,3 +254,62 @@ object PiplineCPU {
     print("\n[Success]\n")
   }
 }
+
+class PiplineCPUSimplify(
+    instFile: String = "",
+    dataFile: String = "",
+    startAddress: Int = 0x0
+) extends Module {
+  val io = IO(new PiplineCPUGeneralSimplifyIO)
+
+  val cpu = Module(new PiplineCPU(instFile, dataFile, startAddress))
+
+  io.isValidInst := cpu.io.isValidInst
+
+  io.pc := cpu.io.ifPC
+  io.nextPC := cpu.io.nextPC
+  io.inst := cpu.io.ifInst
+
+  io.aluOperation := cpu.io.aluOperation
+  io.imm := cpu.io.imm
+  io.aluResult := cpu.io.aluResult
+
+  io.opcode := cpu.io.opcode
+  io.isTrue := cpu.io.isTrue
+  io.isJALR := cpu.io.isJALR
+  io.isBType := cpu.io.isBType
+  io.isJump := cpu.io.isJump
+  io.immALUToReg := cpu.io.immALUToReg
+  io.memRead := cpu.io.memRead
+  io.memWrite := cpu.io.memWrite
+  io.immRs2ToALU := cpu.io.immRs2ToALU
+  io.pcRs1ToALU := cpu.io.pcRs1ToALU
+  io.isIType := cpu.io.isIType
+  io.isRType := cpu.io.isRType
+  io.isWord := cpu.io.isWord
+  io.ifWriteToReg := cpu.io.ifWriteToReg
+
+  io.rs1 := cpu.io.rs1
+  io.rs2 := cpu.io.rs2
+  io.rd := cpu.io.rd
+
+  io.bitType := cpu.io.bitType
+  io.isUnsigned := cpu.io.isUnsigned
+  io.readData := cpu.io.readData
+}
+
+object PiplineCPUSimplify {
+  def main(args: Array[String]) = {
+    print(
+      getVerilogString(new PiplineCPUSimplify())
+    )
+    emitVerilog(
+      new PiplineCPUSimplify(),
+      Array(
+        "--target-dir",
+        s"generated/${PiplineCPUSimplify.toString().split('$')(0).split('.').last}"
+      )
+    )
+    print("\n[Success]\n")
+  }
+}

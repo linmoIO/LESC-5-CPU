@@ -30,10 +30,10 @@ class HazardJudgement extends Module {
     val memWriteEnable = Input(Bool())
     val memRd = Input(UInt(5.W))
     /* output */
-    val ifRS1EXE = Output(Bool())
-    val ifRS2EXE = Output(Bool())
-    val ifRS1MEM = Output(Bool())
-    val ifRS2MEM = Output(Bool())
+    val ifRs1EXE = Output(Bool())
+    val ifRs2EXE = Output(Bool())
+    val ifRs1MEM = Output(Bool())
+    val ifRs2MEM = Output(Bool())
   })
   // 默认为寄存器 zero
   val useRs1 = WireDefault(0.U(5.W)) // 将读出的寄存器 rs1
@@ -49,20 +49,20 @@ class HazardJudgement extends Module {
   when(io.exeWriteEnable === true.B) { exeWriteRd := io.exeRd }
   when(io.memWriteEnable === true.B) { memWriteRd := io.memRd }
 
-  val ifRS1EXE =
+  val ifRs1EXE =
     (exeWriteRd =/= 0.U) && (useRs1 === exeWriteRd) // EXE 阶段和 rs1 数据冲突
-  val ifRS2EXE =
+  val ifRs2EXE =
     (exeWriteRd =/= 0.U) && (useRs2 === exeWriteRd) // EXE 阶段和 rs2 数据冲突
 
-  val ifRS1MEM =
+  val ifRs1MEM =
     (memWriteRd =/= 0.U) && (useRs1 === memWriteRd) // MEM 阶段和 rs1 数据冲突
-  val ifRS2MEM =
+  val ifRs2MEM =
     (memWriteRd =/= 0.U) && (useRs2 === memWriteRd) // MEM 阶段和 rs1 数据冲突
 
-  io.ifRS1EXE := ifRS1EXE
-  io.ifRS2EXE := ifRS2EXE
-  io.ifRS1MEM := ifRS1MEM
-  io.ifRS2MEM := ifRS2MEM
+  io.ifRs1EXE := ifRs1EXE
+  io.ifRs2EXE := ifRs2EXE
+  io.ifRs1MEM := ifRs1MEM
+  io.ifRs2MEM := ifRs2MEM
 }
 
 /**
@@ -77,10 +77,10 @@ class HazardJudgement extends Module {
 class DataForwarding extends Module {
   val io = IO(new Bundle {
     /* input */
-    val ifRS1EXE = Input(Bool())
-    val ifRS2EXE = Input(Bool())
-    val ifRS1MEM = Input(Bool())
-    val ifRS2MEM = Input(Bool())
+    val ifRs1EXE = Input(Bool())
+    val ifRs2EXE = Input(Bool())
+    val ifRs1MEM = Input(Bool())
+    val ifRs2MEM = Input(Bool())
 
     val exeIsJump = Input(Bool())
     val exeImmALUToReg = Input(Bool())
@@ -155,7 +155,7 @@ class DataForwarding extends Module {
       ifNeedRs1 := false.B
       ifNeedRs2 := false.B
 
-      when(io.ifRS1EXE === true.B) {
+      when(io.ifRs1EXE === true.B) {
         when(io.exeMemRead === true.B) { // 得等到 MEM 阶段才能得到数据
           ifNeedRs1 := true.B // 记录 rs1 需要转发
           pcRecordReg := io.exePC // 记录数据源 PC
@@ -168,13 +168,13 @@ class DataForwarding extends Module {
           forwardRs1 := true.B // 表示将数据转发到 rs1
         }
       }.otherwise { // EXE 阶段比 MEM 阶段优先级更高
-        when(io.ifRS1MEM === true.B) {
+        when(io.ifRs1MEM === true.B) {
           forwardData1 := memResWire
           forwardRs1 := true.B // 表示将数据转发到 rs1
         }
       }
 
-      when(io.ifRS2EXE === true.B) {
+      when(io.ifRs2EXE === true.B) {
         when(io.exeMemRead === true.B) { // 得等到 MEM 阶段才能得到数据
           ifNeedRs2 := true.B // 记录 rs2 需要转发
           pcRecordReg := io.exePC // 记录数据源 PC
@@ -187,7 +187,7 @@ class DataForwarding extends Module {
           forwardRs2 := true.B // 表示将数据转发到 rs2
         }
       }.otherwise { // EXE 阶段比 MEM 阶段优先级更高
-        when(io.ifRS2MEM === true.B) {
+        when(io.ifRs2MEM === true.B) {
           forwardData2 := memResWire
           forwardRs2 := true.B // 表示将数据转发到 rs1
         }
@@ -293,10 +293,10 @@ class DataForwardingUnit extends Module {
   hazardJudgement.io.memWriteEnable := io.memWriteEnable
   hazardJudgement.io.memRd := io.memRd
 
-  dataForwarding.io.ifRS1EXE := hazardJudgement.io.ifRS1EXE
-  dataForwarding.io.ifRS2EXE := hazardJudgement.io.ifRS2EXE
-  dataForwarding.io.ifRS1MEM := hazardJudgement.io.ifRS1MEM
-  dataForwarding.io.ifRS2MEM := hazardJudgement.io.ifRS2MEM
+  dataForwarding.io.ifRs1EXE := hazardJudgement.io.ifRs1EXE
+  dataForwarding.io.ifRs2EXE := hazardJudgement.io.ifRs2EXE
+  dataForwarding.io.ifRs1MEM := hazardJudgement.io.ifRs1MEM
+  dataForwarding.io.ifRs2MEM := hazardJudgement.io.ifRs2MEM
 
   dataForwarding.io.exeIsJump := io.exeIsJump
   dataForwarding.io.exeImmALUToReg := io.exeImmALUToReg

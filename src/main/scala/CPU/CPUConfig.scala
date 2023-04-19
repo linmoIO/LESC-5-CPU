@@ -30,7 +30,7 @@ object CPUConfig {
     ceil(log(INST_BYTE) / log(2)).toInt // 指令内存地址寻址偏移量 (按字节)
   // val INST_MEMORY_SIZE = 128 // 用于测试
   val INST_MEMORY_SIZE =
-    1024 // 指令内存大小 (指令内存按指令长度为单位) : 1024 * 4B = 4KB， 理论可支持的最大指令内存大小 2^64 * 4B = 16EB
+    64 * 1024 // 指令内存大小 (指令内存按指令长度为单位) : 64 * 1024 * 4B = 256KB， 理论可支持的最大指令内存大小 2^64 * 4B = 16EB
 
   /* 数据内存相关配置 */
 
@@ -39,7 +39,7 @@ object CPUConfig {
     ceil(log(DATA_BYTE) / log(2)).toInt // 数据内存地址寻址偏移量 (按字节)
   // val DATA_MEMORY_SIZE = 8 // 用于测试
   val DATA_MEMORY_SIZE =
-    4 * 1024 // 数据内存大小 (数据内存按字节为单位) : 4 * 1024 * 1B = 4KB， 理论可支持的最大数据内存大小 2^64 * B = 4EB
+    256 * 1024 // 数据内存大小 (数据内存按字节为单位) : 256 * 1024 * 8B = 2MB， 理论可支持的最大数据内存大小 2^64 * B = 4EB
 
   /* 字节宽度相关配置 */
 
@@ -69,7 +69,8 @@ object CPUConfig {
   /* 初始化相关配置 [可修改] */
 
   val IF_RESERVE_STACK_SPACE = true // 是否预先保留栈空间
-  val STACK_SIZE = 1024 // 预先开栈大小
+  val STACK_SIZE = 8 * 4096 // 预先开栈大小
+  val TIME_OUT = 200000 // 测试时的周期超时上限
 
   // 以下均已弃用, 由外部参数传入
   // val START_ADDRESS = 0x00000000 // 起始地址
