@@ -268,6 +268,10 @@ trait TestcaseSet { // 测试集
     ("src/test/hex/rsort", "rsort", 0x0),
     ("src/test/hex/towers", "towers", 0x0),
     ("src/test/hex/vvadd", "vvadd", 0x0)
+
+    // ("src/test/hex/fibonacci_recursion", "fibonacci_recursion", 0xa0), // 耗时比较长
+    // ("src/test/hex/fibonacci", "fibonacci", 0xb8),
+    // ("src/test/hex/myTest", "myTest", 0x0)
   )
   val testcasesBase = List(
     /* dir, fileName, startAddress */
