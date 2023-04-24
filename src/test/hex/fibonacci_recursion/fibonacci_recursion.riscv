@@ -50,6 +50,14 @@ fibonacci:
 	addi	sp,sp,48
 	jr	ra
 	.size	fibonacci, .-fibonacci
+	.globl	RIGHT_ANS
+	.section	.srodata,"a"
+	.align	2
+	.type	RIGHT_ANS, @object
+	.size	RIGHT_ANS, 4
+RIGHT_ANS:
+	.word	21
+	.text
 	.align	2
 	.globl	main
 	.type	main, @function
@@ -65,7 +73,16 @@ main:
 	call	fibonacci
 	mv	a5,a0
 	sw	a5,-24(s0)
+	li	a4,21
 	lw	a5,-24(s0)
+	sext.w	a5,a5
+	bne	a5,a4,.L6
+	li	a5,12345344
+	addi	a5,a5,334
+	j	.L7
+.L6:
+	lw	a5,-24(s0)
+.L7:
 	mv	a0,a5
 	ld	ra,24(sp)
 	ld	s0,16(sp)

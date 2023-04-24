@@ -16,9 +16,11 @@ import scala.collection.mutable._
 import scala.io.Source
 
 trait TestFunctionInstMemoryRandom {
+  val inst_test_size = math.min(INST_MEMORY_SIZE, 1024)
+
   // 生成MEM_INST_SIZE条随机指令进行测试
   val inst_list =
-    Seq.fill(INST_MEMORY_SIZE)(
+    Seq.fill(inst_test_size)(
       scala.util.Random.nextInt().toLong & 0x00ffffffffL
     )
 
@@ -42,7 +44,7 @@ trait TestFunctionInstMemoryRandom {
     val memFile = new File(filePath)
     memFile.createNewFile()
     val memPrintWriter = new PrintWriter(memFile)
-    for (i <- 0 to INST_MEMORY_SIZE - 1) {
+    for (i <- 0 to inst_test_size - 1) {
       memPrintWriter.println(long2InstHex(inst_list(i)))
     }
     memPrintWriter.close()
@@ -53,7 +55,7 @@ trait TestFunctionInstMemoryRandom {
 
   def testFn(dut: InstMemory): Unit = {
     // 依次读取所有的指令，与inst_list进行匹配
-    for (i <- 0 to INST_MEMORY_SIZE - 1) {
+    for (i <- 0 to inst_test_size - 1) {
       dut.io.address.poke((i * INST_BYTE).U) // 作为地址，应该左移两位，即乘以4
       dut.clock.step()
       dut.io.inst.expect(

@@ -61,12 +61,20 @@ Disassembly of section .text:
   cc:	fef42623          	sw	a5,-20(s0)
   d0:	fec42783          	lw	a5,-20(s0)
   d4:	00078513          	mv	a0,a5
-  d8:	f29ff0ef          	jal	0 <fibonacci>
-  dc:	00050793          	mv	a5,a0
-  e0:	fef42423          	sw	a5,-24(s0)
-  e4:	fe842783          	lw	a5,-24(s0)
-  e8:	00078513          	mv	a0,a5
-  ec:	01813083          	ld	ra,24(sp)
-  f0:	01013403          	ld	s0,16(sp)
-  f4:	02010113          	add	sp,sp,32
-  f8:	00008067          	ret
+  d8:	00000097          	auipc	ra,0x0
+  dc:	f28080e7          	jalr	-216(ra) # 0 <fibonacci>
+  e0:	00050793          	mv	a5,a0
+  e4:	fef42423          	sw	a5,-24(s0)
+  e8:	63d00713          	li	a4,1597
+  ec:	fe842783          	lw	a5,-24(s0)
+  f0:	0007879b          	sext.w	a5,a5
+  f4:	00e79863          	bne	a5,a4,104 <main+0x4c>
+  f8:	00bc67b7          	lui	a5,0xbc6
+  fc:	14e78793          	add	a5,a5,334 # bc614e <__global_pointer$+0xba594e>
+ 100:	0080006f          	j	108 <main+0x50>
+ 104:	fe842783          	lw	a5,-24(s0)
+ 108:	00078513          	mv	a0,a5
+ 10c:	01813083          	ld	ra,24(sp)
+ 110:	01013403          	ld	s0,16(sp)
+ 114:	02010113          	add	sp,sp,32
+ 118:	00008067          	ret

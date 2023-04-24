@@ -14,8 +14,13 @@ int fibonacci(int n) {
   }
 }
 
+const int RIGHT_ANS = 1597;
+
 int main() {
   int n = 17;
   int ret = fibonacci(n); // 计算斐波那契数列
-  return ret;             // 结果存在a0寄存器中
+  if (ret == RIGHT_ANS) {
+    return 12345678;
+  }
+  return ret;
 }

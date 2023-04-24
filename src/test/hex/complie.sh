@@ -43,7 +43,7 @@ complie(){
 
         $RISCV-as $SRC.riscv -march=rv64i -mabi=lp64 -o $SRC.elf
 
-        $RISCV-ld -e main -Ttext 0x0 -Tdata $DATA_ADDRESS $SRC.elf -o $SRC
+        $RISCV-ld -e main --no-relax -Ttext 0x0 -Tdata $DATA_ADDRESS $SRC.elf -o $SRC
         REPAIR=ret
     fi
 

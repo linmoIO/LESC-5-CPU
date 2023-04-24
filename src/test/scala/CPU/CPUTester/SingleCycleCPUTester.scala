@@ -272,7 +272,7 @@ trait TestcaseSet { // 测试集
   val testcasesBase = List(
     /* dir, fileName, startAddress */
 
-    ("src/test/hex/fibonacci_recursion", "fibonacci_recursion", 0x98), // 耗时比较长
+    ("src/test/hex/fibonacci_recursion", "fibonacci_recursion", 0xa0), // 耗时比较长
     ("src/test/hex/fibonacci", "fibonacci", 0xb8),
     ("src/test/hex/myTest", "myTest", 0x0),
 

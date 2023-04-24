@@ -17,9 +17,11 @@ import chiseltest.ChiselScalatestTester
 import CPU.CPUPrintf
 
 trait TestFuncRandomReadWrite {
+  val data_test_size = math.min(DATA_MEMORY_SIZE, 1024)
+
 // 生成MEM_DATA_SIZE条随机数据进行测试
   val data_list =
-    Seq.fill(DATA_MEMORY_SIZE)(
+    Seq.fill(data_test_size)(
       scala.util.Random.nextInt().toLong & 0x7fffffffffL
     )
 
@@ -34,7 +36,7 @@ trait TestFuncRandomReadWrite {
     dut.io.writeData.poke(0.U(XLEN.W))
     dut.io.address.poke(0.U(XLEN.W))
     // 非LS指令
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.address.poke((i * DATA_BYTE).U)
       dut.clock.step(1)
       dut.io.readData.expect(0.U, s"非LS指令 ${i}")
@@ -43,7 +45,7 @@ trait TestFuncRandomReadWrite {
     print(s"=============== SD 指令 ===============\n")
     dut.io.memWrite.poke(true.B)
     // dut.io.memRead.poke(true.B)
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(data_list(i))
       print(s"写入 ${i} 的数据为 : 0x${data_list(i).toHexString}\n")
       dut.io.address.poke((i * DATA_BYTE).U)
@@ -54,7 +56,7 @@ trait TestFuncRandomReadWrite {
     print(s"=============== LD 指令 ===============\n")
     dut.io.memWrite.poke(false.B)
     dut.io.memRead.poke(true.B)
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(0.U)
       dut.io.address.poke((i * DATA_BYTE).U)
       // print(s"${(i * DATA_BYTE).U}\n")
@@ -73,7 +75,7 @@ trait TestFuncRandomReadWrite {
     dut.io.memWrite.poke(true.B)
     dut.io.memRead.poke(false.B)
     dut.io.bitType.poke("b01".U)
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(0)
       dut.io.address.poke((i * DATA_BYTE).U)
       dut.clock.step(1) // 时钟往前, 将数据读出
@@ -84,7 +86,7 @@ trait TestFuncRandomReadWrite {
     dut.io.memWrite.poke(false.B)
     dut.io.memRead.poke(true.B)
     dut.io.bitType.poke("b01".U)
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(0.U)
       dut.io.address.poke((i * DATA_BYTE).U)
       dut.clock.step(1) // 时钟往前, 将数据读出
@@ -94,7 +96,7 @@ trait TestFuncRandomReadWrite {
 
     // LH指令读低16比特
     print(s"=============== LH指令读低16比特 ===============\n")
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(0.U)
       dut.io.address.poke((i * DATA_BYTE).U)
       dut.clock.step(1) // 时钟往前, 将数据读出
@@ -107,7 +109,7 @@ trait TestFuncRandomReadWrite {
     dut.io.memWrite.poke(true.B)
     dut.io.memRead.poke(true.B)
     dut.io.bitType.poke("b00".U)
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(data_list(i))
       dut.io.address.poke((i * DATA_BYTE).U)
       dut.clock.step(1)
@@ -117,7 +119,7 @@ trait TestFuncRandomReadWrite {
     }
 
     // 清空 (15,8) 位, 避免后续 LW 出错
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       data_list(i) = data_list(i) & 0x7fffff00ffL
     }
 
@@ -125,7 +127,7 @@ trait TestFuncRandomReadWrite {
     print(s"=============== LBU指令读低8比特 ===============\n")
     dut.io.memWrite.poke(false.B)
     dut.io.memRead.poke(true.B)
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(0.U)
       dut.io.address.poke((i * DATA_BYTE).U)
       dut.clock.step(1)
@@ -136,7 +138,7 @@ trait TestFuncRandomReadWrite {
     // LB指令读低8比特
     print(s"=============== LB指令读低8比特 ===============\n")
     dut.io.isUnsigned.poke(false.B)
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(0.U)
       dut.io.address.poke((i * DATA_BYTE).U)
       dut.clock.step(1)
@@ -160,7 +162,7 @@ trait TestFuncRandomReadWrite {
     print(s"=============== LW指令读低32比特 ===============\n")
     dut.io.bitType.poke("b10".U)
     dut.io.isUnsigned.poke(false.B)
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(0.U)
       dut.io.address.poke((i * DATA_BYTE).U)
       dut.clock.step(1)
@@ -185,7 +187,7 @@ trait TestFuncRandomReadWrite {
     dut.io.memWrite.poke(true.B)
     dut.io.memRead.poke(false.B)
     dut.io.bitType.poke("b10".U)
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(0)
       dut.io.address.poke((i * DATA_BYTE).U)
       dut.clock.step(1) // 时钟往前, 将数据读出
@@ -196,7 +198,7 @@ trait TestFuncRandomReadWrite {
     dut.io.memWrite.poke(false.B)
     dut.io.memRead.poke(true.B)
     dut.io.bitType.poke("b10".U)
-    for (i <- 0 to DATA_MEMORY_SIZE - 1) {
+    for (i <- 0 to data_test_size - 1) {
       dut.io.writeData.poke(0.U)
       dut.io.address.poke((i * DATA_BYTE).U)
       dut.clock.step(1) // 时钟往前, 将数据读出

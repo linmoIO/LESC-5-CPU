@@ -10,32 +10,43 @@ Disassembly of section .text:
    8:	02010413          	add	s0,sp,32
    c:	00300793          	li	a5,3
   10:	fef42623          	sw	a5,-20(s0)
-  14:	0480006f          	j	5c <main+0x5c>
+  14:	0500006f          	j	64 <main+0x64>
   18:	000207b7          	lui	a5,0x20
-  1c:	0007a703          	lw	a4,0(a5) # 20000 <a>
+  1c:	0047a703          	lw	a4,4(a5) # 20004 <a>
   20:	000207b7          	lui	a5,0x20
-  24:	0047a783          	lw	a5,4(a5) # 20004 <b>
+  24:	0087a783          	lw	a5,8(a5) # 20008 <b>
   28:	00f707bb          	addw	a5,a4,a5
   2c:	0007871b          	sext.w	a4,a5
-  30:	80e1a623          	sw	a4,-2036(gp) # 2000c <res>
-  34:	000207b7          	lui	a5,0x20
-  38:	0047a703          	lw	a4,4(a5) # 20004 <b>
-  3c:	000207b7          	lui	a5,0x20
-  40:	00e7a023          	sw	a4,0(a5) # 20000 <a>
-  44:	80c1a703          	lw	a4,-2036(gp) # 2000c <res>
+  30:	000207b7          	lui	a5,0x20
+  34:	00e7a823          	sw	a4,16(a5) # 20010 <res>
+  38:	000207b7          	lui	a5,0x20
+  3c:	0087a703          	lw	a4,8(a5) # 20008 <b>
+  40:	000207b7          	lui	a5,0x20
+  44:	00e7a223          	sw	a4,4(a5) # 20004 <a>
   48:	000207b7          	lui	a5,0x20
-  4c:	00e7a223          	sw	a4,4(a5) # 20004 <b>
-  50:	fec42783          	lw	a5,-20(s0)
-  54:	0017879b          	addw	a5,a5,1
-  58:	fef42623          	sw	a5,-20(s0)
-  5c:	8081a703          	lw	a4,-2040(gp) # 20008 <n>
-  60:	fec42783          	lw	a5,-20(s0)
-  64:	0007879b          	sext.w	a5,a5
-  68:	faf758e3          	bge	a4,a5,18 <main+0x18>
-  6c:	80c1a783          	lw	a5,-2036(gp) # 2000c <res>
-  70:	fef42423          	sw	a5,-24(s0)
-  74:	fe842783          	lw	a5,-24(s0)
-  78:	00078513          	mv	a0,a5
-  7c:	01813403          	ld	s0,24(sp)
-  80:	02010113          	add	sp,sp,32
-  84:	00008067          	ret
+  4c:	0107a703          	lw	a4,16(a5) # 20010 <res>
+  50:	000207b7          	lui	a5,0x20
+  54:	00e7a423          	sw	a4,8(a5) # 20008 <b>
+  58:	fec42783          	lw	a5,-20(s0)
+  5c:	0017879b          	addw	a5,a5,1
+  60:	fef42623          	sw	a5,-20(s0)
+  64:	000207b7          	lui	a5,0x20
+  68:	00c7a703          	lw	a4,12(a5) # 2000c <n>
+  6c:	fec42783          	lw	a5,-20(s0)
+  70:	0007879b          	sext.w	a5,a5
+  74:	faf752e3          	bge	a4,a5,18 <main+0x18>
+  78:	000207b7          	lui	a5,0x20
+  7c:	0107a783          	lw	a5,16(a5) # 20010 <res>
+  80:	fef42423          	sw	a5,-24(s0)
+  84:	fe842703          	lw	a4,-24(s0)
+  88:	0004e7b7          	lui	a5,0x4e
+  8c:	97378793          	add	a5,a5,-1677 # 4d973 <__global_pointer$+0x2d173>
+  90:	00f71863          	bne	a4,a5,a0 <main+0xa0>
+  94:	00bc67b7          	lui	a5,0xbc6
+  98:	14e78793          	add	a5,a5,334 # bc614e <__global_pointer$+0xba594e>
+  9c:	0080006f          	j	a4 <main+0xa4>
+  a0:	fe842783          	lw	a5,-24(s0)
+  a4:	00078513          	mv	a0,a5
+  a8:	01813403          	ld	s0,24(sp)
+  ac:	02010113          	add	sp,sp,32
+  b0:	00008067          	ret

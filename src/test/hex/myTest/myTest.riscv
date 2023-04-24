@@ -4,32 +4,31 @@
 	.attribute unaligned_access, 0
 	.attribute stack_align, 16
 	.text
-	.globl	a
 	.section	.sdata,"aw"
 	.align	2
 	.type	a, @object
 	.size	a, 4
 a:
 	.word	1
-	.globl	b
 	.align	2
 	.type	b, @object
 	.size	b, 4
 b:
 	.word	2
-	.globl	n
 	.align	2
 	.type	n, @object
 	.size	n, 4
 n:
 	.word	27
-	.globl	res
-	.section	.sbss,"aw",@nobits
+	.local	res
+	.comm	res,4,4
+	.globl	RIGHT_ANS
+	.section	.srodata,"a"
 	.align	2
-	.type	res, @object
-	.size	res, 4
-res:
-	.zero	4
+	.type	RIGHT_ANS, @object
+	.size	RIGHT_ANS, 4
+RIGHT_ANS:
+	.word	317811
 	.text
 	.align	2
 	.globl	main
@@ -70,7 +69,16 @@ main:
 	lui	a5,%hi(res)
 	lw	a5,%lo(res)(a5)
 	sw	a5,-24(s0)
+	lw	a4,-24(s0)
+	li	a5,319488
+	addi	a5,a5,-1677
+	bne	a4,a5,.L4
+	li	a5,12345344
+	addi	a5,a5,334
+	j	.L6
+.L4:
 	lw	a5,-24(s0)
+.L6:
 	mv	a0,a5
 	ld	s0,24(sp)
 	addi	sp,sp,32

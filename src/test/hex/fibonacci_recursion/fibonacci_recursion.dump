@@ -21,44 +21,54 @@ Disassembly of section .text:
   34:	00200793          	li	a5,2
   38:	00f71663          	bne	a4,a5,44 <fibonacci+0x44>
   3c:	00100793          	li	a5,1
-  40:	0400006f          	j	80 <fibonacci+0x80>
+  40:	0480006f          	j	88 <fibonacci+0x88>
   44:	fdc42783          	lw	a5,-36(s0)
   48:	fff7879b          	addw	a5,a5,-1
   4c:	0007879b          	sext.w	a5,a5
   50:	00078513          	mv	a0,a5
-  54:	fadff0ef          	jal	0 <fibonacci>
-  58:	00050793          	mv	a5,a0
-  5c:	00078493          	mv	s1,a5
-  60:	fdc42783          	lw	a5,-36(s0)
-  64:	ffe7879b          	addw	a5,a5,-2
-  68:	0007879b          	sext.w	a5,a5
-  6c:	00078513          	mv	a0,a5
-  70:	f91ff0ef          	jal	0 <fibonacci>
-  74:	00050793          	mv	a5,a0
-  78:	00f487bb          	addw	a5,s1,a5
-  7c:	0007879b          	sext.w	a5,a5
-  80:	00078513          	mv	a0,a5
-  84:	02813083          	ld	ra,40(sp)
-  88:	02013403          	ld	s0,32(sp)
-  8c:	01813483          	ld	s1,24(sp)
-  90:	03010113          	add	sp,sp,48
-  94:	00008067          	ret
+  54:	00000097          	auipc	ra,0x0
+  58:	fac080e7          	jalr	-84(ra) # 0 <fibonacci>
+  5c:	00050793          	mv	a5,a0
+  60:	00078493          	mv	s1,a5
+  64:	fdc42783          	lw	a5,-36(s0)
+  68:	ffe7879b          	addw	a5,a5,-2
+  6c:	0007879b          	sext.w	a5,a5
+  70:	00078513          	mv	a0,a5
+  74:	00000097          	auipc	ra,0x0
+  78:	f8c080e7          	jalr	-116(ra) # 0 <fibonacci>
+  7c:	00050793          	mv	a5,a0
+  80:	00f487bb          	addw	a5,s1,a5
+  84:	0007879b          	sext.w	a5,a5
+  88:	00078513          	mv	a0,a5
+  8c:	02813083          	ld	ra,40(sp)
+  90:	02013403          	ld	s0,32(sp)
+  94:	01813483          	ld	s1,24(sp)
+  98:	03010113          	add	sp,sp,48
+  9c:	00008067          	ret
 
-0000000000000098 <main>:
-  98:	fe010113          	add	sp,sp,-32
-  9c:	00113c23          	sd	ra,24(sp)
-  a0:	00813823          	sd	s0,16(sp)
-  a4:	02010413          	add	s0,sp,32
-  a8:	00800793          	li	a5,8
-  ac:	fef42623          	sw	a5,-20(s0)
-  b0:	fec42783          	lw	a5,-20(s0)
-  b4:	00078513          	mv	a0,a5
-  b8:	f49ff0ef          	jal	0 <fibonacci>
-  bc:	00050793          	mv	a5,a0
-  c0:	fef42423          	sw	a5,-24(s0)
-  c4:	fe842783          	lw	a5,-24(s0)
-  c8:	00078513          	mv	a0,a5
-  cc:	01813083          	ld	ra,24(sp)
-  d0:	01013403          	ld	s0,16(sp)
-  d4:	02010113          	add	sp,sp,32
-  d8:	00008067          	ret
+00000000000000a0 <main>:
+  a0:	fe010113          	add	sp,sp,-32
+  a4:	00113c23          	sd	ra,24(sp)
+  a8:	00813823          	sd	s0,16(sp)
+  ac:	02010413          	add	s0,sp,32
+  b0:	00800793          	li	a5,8
+  b4:	fef42623          	sw	a5,-20(s0)
+  b8:	fec42783          	lw	a5,-20(s0)
+  bc:	00078513          	mv	a0,a5
+  c0:	00000097          	auipc	ra,0x0
+  c4:	f40080e7          	jalr	-192(ra) # 0 <fibonacci>
+  c8:	00050793          	mv	a5,a0
+  cc:	fef42423          	sw	a5,-24(s0)
+  d0:	01500713          	li	a4,21
+  d4:	fe842783          	lw	a5,-24(s0)
+  d8:	0007879b          	sext.w	a5,a5
+  dc:	00e79863          	bne	a5,a4,ec <main+0x4c>
+  e0:	00bc67b7          	lui	a5,0xbc6
+  e4:	14e78793          	add	a5,a5,334 # bc614e <__global_pointer$+0xba594e>
+  e8:	0080006f          	j	f0 <main+0x50>
+  ec:	fe842783          	lw	a5,-24(s0)
+  f0:	00078513          	mv	a0,a5
+  f4:	01813083          	ld	ra,24(sp)
+  f8:	01013403          	ld	s0,16(sp)
+  fc:	02010113          	add	sp,sp,32
+ 100:	00008067          	ret
